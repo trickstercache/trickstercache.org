@@ -44,6 +44,9 @@ h1 {
   color: var(--md-default-fg-color--light);
 }
 
+.md-header__source {
+color: #444;}
+
 .md-footer-copyright {
     color: #cdcdcd;
 }
