@@ -1,0 +1,38 @@
+site_name: trickster
+site_url: https://example.com/
+nav:
+    - Home: index.md
+    - About: about.md
+theme:
+  name: material
+  logo: ../../images/logos/logo.png
+
+  palette:
+    - scheme: trickster
+    #   primary: blue grey
+      accent: green
+
+extra_css:
+  - stylesheets/extra.css
+
+
+# theme: material
+#   palette:
+    # - scheme: default
+#       primary: indigo
+#       accent: indigo
+#       toggle:
+#         icon: material/toggle-switch-off-outline
+#         name: Switch to dark mode
+#     - scheme: slate
+#       primary: red
+#       accent: red
+#       toggle:
+#         icon: material/toggle-switch
+#         name: Switch to light mode
+#   font:
+#     text: Roboto
+#     code: Roboto Mono
+#   favicon: assets/favicon.png
+#   icon:
+#     logo: logo
