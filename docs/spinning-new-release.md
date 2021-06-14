@@ -1,4 +1,4 @@
-# Spinning New Trickster Release
+# Spinning a New Trickster Release
 
 Users with push access to tricksterproxy/trickster (maintainers and owners) can spin releases.
 

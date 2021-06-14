@@ -1,4 +1,4 @@
-# Request Rewriters
+# HTTP Request Rewriters
 
 A Request Rewriter is a named series of instructions that modifies any part of the incoming HTTP request. Request Rewriters are used in various parts of the Trickster configuration to make scoped changes. For example, a rewriter can modify the path, headers, parameters, etc. of a URL using mechanisms like search/replace, set and append.
 

@@ -4,11 +4,12 @@ site_url: http://tricksterproxy.io/
 repo_url: https://github.com/tricksterproxy/trickster
 repo_name: tricksterproxy/trickster
 
-
 theme:
   name: material
   logo: ../../images/logos/trickster-logo.svg
-
+  favicon: ../../images/favicon.ico
+  features:
+    # - navigation.expand
   palette:
     - scheme: trickster
       accent: green
@@ -16,3 +17,39 @@ theme:
 extra_css:
   - stylesheets/extra.css
 
+
+# Page tree
+nav:
+  - Welcome: index.md
+  - Getting started:
+    - Configuring Trickster: configuring.md      
+    - Where to Place Trickster: placement.md
+  - Origins:
+    - Supported Origin Types: supported-origin-types.md
+    - Rule Origin: rule.md
+    - Using Multiple-Origins with a single Trickster instance: multi-origin.md
+    - TLS Support: tls.md
+  - Paths:
+    - Customizing HTTP Path Behavior: paths.md
+    - HTTP Request Rewriters: request-rewriters.md
+  - Caching:
+    - Cache Options: caches.md
+    - Negative Caching: negative-caching.md
+    - Trickster Caching Retention Policies: retention.md
+    - Byte Range Request Support: range-request.md
+  - Tracing and Metrics:
+    - Trickster Metrics: metrics.md
+    - Distributed Tracing via OpenTelemetry: open-telemetry.md
+    - Tracing Support: tracing.md
+  - Customizing and Extending Trickster:
+      - Adding a New Configuration Value: adding-new-config.md 
+      - Extending Trickster to Support a New Origin Type: origin-extensibility.md
+      - Spinning a New Trickster Release: spinning-new-release.md
+  - Per-Query Time Series Instructions: per-query-instructions.md
+  - Release Information:
+    - Changelog: new-changed-1.1.md
+    - Trickster Roadmap: roadmap.md
+    - PromSim Update: promsim.md
+    - InfluxDB Support: influxdb.md
+
+  # - Reference:
