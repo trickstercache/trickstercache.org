@@ -50,3 +50,14 @@ color: #444;}
 .md-footer-copyright {
     color: #cdcdcd;
 }
+
+
+article img {
+    display: block;
+    margin: auto;
+}
+
+figcaption {
+    font-size: .8rem;
+    line-height: 1rem;
+}

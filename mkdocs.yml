@@ -9,7 +9,8 @@ theme:
   logo: ../../images/logos/trickster-logo.svg
   favicon: ../../images/favicon.ico
   features:
-    # - navigation.expand
+    - navigation.expand
+
   palette:
     - scheme: trickster
       accent: green
@@ -18,10 +19,11 @@ extra_css:
   - stylesheets/extra.css
 
 
-# Page tree
+# nav tree
 nav:
-  - Welcome: index.md
+  - Overview: index.md
   - Getting started:
+    - Installing: installing.md      
     - Configuring Trickster: configuring.md      
     - Where to Place Trickster: placement.md
   - Origins:
@@ -41,6 +43,8 @@ nav:
     - Trickster Metrics: metrics.md
     - Distributed Tracing via OpenTelemetry: open-telemetry.md
     - Tracing Support: tracing.md
+  - Deployment:
+    -  Deployment with Trickster: deployment.md
   - Customizing and Extending Trickster:
       - Adding a New Configuration Value: adding-new-config.md 
       - Extending Trickster to Support a New Origin Type: origin-extensibility.md

@@ -1,6 +1,6 @@
 # TLS Support
 
-Trickster supports TLS on both the frontend server and backend clients.
+Trickster supports the Transport Security Layer, or TLS, protocol on the frontend server as well as backend clients.
 
 ## Basics
 
@@ -13,7 +13,7 @@ listen_port = 8480
 tls_listen_port = 8483
 ```
 
-Note, Trickster will only start listening on the TLS port if at least one origin has a valid certificate and key configured.
+Note, Trickster only listens on the TLS port if at least one origin has a valid certificate and key configured.
 
 Each origin section of a Trickster config file can be augmented with the optional `tls` section to modify TLS behavior for front-end and back-end requests. For example:
 
