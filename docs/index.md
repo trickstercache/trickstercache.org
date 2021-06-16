@@ -22,8 +22,8 @@ Trickster is a fully-featured HTTP reverse proxy cache for HTTP applications suc
 * Built-in Prometheus [metrics](./metrics.md) and customizable [Health Check](./health.md) Endpoints for end-to-end monitoring
 * [Negative Caching](./negative-caching.md) to prevent domino effect outages
 * High-performance [Collapsed Forwarding](./collapsed-forwarding.md)
-* Best-in-class [Byte Range Request caching and acceleration](./docs/range_request.md).
-* [Distributed Tracing](./docs/tracing.md) via OpenTelemetry, supporting Jaeger and Zipkin
+* Best-in-class [Byte Range Request caching and acceleration](./range_request.md).
+* [Distributed Tracing](./tracing.md) via OpenTelemetry, supporting Jaeger and Zipkin
 * Rules engine for custom request routing and rewriting
 
 ## Time Series Database Accelerator

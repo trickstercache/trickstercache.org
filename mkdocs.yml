@@ -55,5 +55,8 @@ nav:
     - Trickster Roadmap: roadmap.md
     - PromSim Update: promsim.md
     - InfluxDB Support: influxdb.md
+  - ClickHouse: clickhouse.md
+  - Collapsed Forwarding: collapsed-forwarding.md
+  - Health Checks: health.md
 
   # - Reference:
