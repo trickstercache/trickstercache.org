@@ -14,7 +14,7 @@ To deploy with Helm and Kubernetes role-based access control, or rbac, use the f
 
 ### Bootstrap Local Kubernetes-Helm Dev
 
-- Install [Helm](helm.sh) **Client Version 2.9.1**
+- Install [Helm](https://helm.sh) **Client Version 2.9.1**
     ```
     brew install kubernetes-helm
     ```

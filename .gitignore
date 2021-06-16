@@ -4,6 +4,7 @@ site/
 /dist/
 *.log
 node_modules
+.vscode/
 
 # Ignore npm/yarn debug log
 npm-debug.log
