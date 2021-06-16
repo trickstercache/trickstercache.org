@@ -1,6 +1,8 @@
 
 # Installing Trickster
 
+<!-- Is the following link the same as this? https://github.com/trickstercache/trickster/tree/main/examples/docker-compose  -->
+
 Check out our end-to-end [Docker Compose demo composition](./deploy/trickster-demo) for a zero-configuration running environment.
 
 ## Installing with Docker
@@ -11,7 +13,7 @@ Docker images are available on Docker Hub:
 $ docker run --name trickster -d -v /path/to/trickster.conf:/etc/trickster/trickster.conf -p 0.0.0.0:8480:8480 tricksterproxy/trickster
 ```
 
-See the [Deployment](./deployment.md) documentation for more information about using or creating Trickster docker images.
+See the [Deployment](./deployment.md) documentation for more information about using or creating Trickster Docker images.
 
 ## Installing with Kubernetes
 

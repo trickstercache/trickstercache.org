@@ -24,6 +24,7 @@ nav:
   - Overview: index.md
   - Getting started:
     - Installing: installing.md      
+    - Installing with Docker Compose: docker-compose.md      
     - Configuring Trickster: configuring.md      
     - Where to Place Trickster: placement.md
   - Origins:
