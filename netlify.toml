@@ -4,3 +4,4 @@ command = "mkdocs build"
 
 [build.environment]
 MKDOCS_VERSION = "1.2.1"
+PYTHON_VERSION = "3.9.5"
