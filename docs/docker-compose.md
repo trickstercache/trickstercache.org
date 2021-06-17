@@ -1,14 +1,27 @@
-# Docker Compose Example
+# Try Trickster with Docker Compose
 
 <!-- from https://github.com/trickstercache/trickster/blob/main/examples/docker-compose/README.md -->
 
-This composition creates service containers for Prometheus, Grafana, Jaeger, Zipkin, Redis, Trickster and Mockster that together demonstrate several basic end-to-end configurations for running Trickster in your environment with different cache and tracing provider options. Note - if you have any of these services running locally already, you may run into port conflicts and need to temporarily spin down the conflicting processes.
+This composition creates service containers for Prometheus, Grafana, Jaeger, Zipkin, Redis, Trickster and Mockster that together demonstrate several basic end-to-end configurations for running Trickster in your environment with different cache and tracing provider options. 
 
-## Getting Started
+!!! note
+    If you have any of these services running locally already, you may run into port conflicts and need to temporarily spin down the conflicting processes.
 
-First, make sure you have Docker and Docker Compose installed. This varies from system to system, and this document assumes you have this handled already. Then, clone the [Trickster Github project](https://github.com/trickstercache/trickster) and change your working directory to `./examples/docker-compose`.
+## Prerequisites
 
-To run the demo from the demo directory, run `docker-compose up -d`.
+You should already have the following installed:
+
+* [Docker](https://docs.docker.com/get-docker/)
+* [Docker Compose](https://docs.docker.com/compose/install/)
+
+## Starting the demo
+
+1. Clone the [Trickster Github project](https://github.com/trickstercache/trickster). 
+1. At the command line, change your working directory to `.trickster-main/deploy/trickster-demo` with the following command:
+    ```
+    cd trickster-main/deploy/trickster-demo
+    ```
+1. To run the demo from the demo directory, run `docker-compose up -d`.
 
 You can then interact with each of the services on their exposed ports (as defined in [Compose file](https://github.com/trickstercache/trickster/blob/main/examples/docker-compose/docker-compose.yml)), or by running `docker logs $container_name`, `docker attach $container_name`, etc.
 

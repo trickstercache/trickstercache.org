@@ -8,13 +8,25 @@ theme:
   name: material
   logo: ../../images/logos/trickster-logo.svg
   favicon: ../../images/favicon.ico
+  # expand left nav headers. Remove for default of collapsed
   features:
     - navigation.expand
-
+  
+  # trickster scheme is defined in extra.css as an override to default theme colors 
   palette:
     - scheme: trickster
       accent: green
 
+# Add extensions to markdown for call outs that are collapsible and can feature code blocks.
+# Add permalink feature on headings
+markdown_extensions:
+  - toc:
+      permalink: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+
+# docs/stylesheets/extra.css overrides default material CSS
 extra_css:
   - stylesheets/extra.css
 
@@ -23,8 +35,8 @@ extra_css:
 nav:
   - Overview: index.md
   - Getting started:
-    - Installing: installing.md      
-    - Installing with Docker Compose: docker-compose.md      
+    - Installing Trickster: installing.md      
+    - Try it with Docker Compose: docker-compose.md      
     - Configuring Trickster: configuring.md      
     - Where to Place Trickster: placement.md
   - Origins:
