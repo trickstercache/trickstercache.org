@@ -1,4 +1,6 @@
 [build]
-publish = "public"
+publish = "site"
 command = "mkdocs build"
 
+[build.environment]
+MKDOCS_VERSION = "1.2.1"
