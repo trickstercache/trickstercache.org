@@ -1,0 +1,46 @@
+// Trickster overrides
+
+// override !important from theme to apply uppercase to name
+.navbar-brand>.text-uppercase {
+    text-transform: capitalize !important;
+    position: relative;
+    top: 2px;
+}
+
+.td-navbar .td-search-input {
+    background: #fff;
+    border: 1px #ddd solid;
+}
+
+// Left nav
+
+.td-sidebar-nav a {
+    &:hover {
+        color: $secondary;
+    }
+}
+
+// Right nav
+
+.td-toc #TableOfContents {
+    a {
+        color: $gray-800;
+        &:hover {
+            color: $trickster-blue;
+            text-decoration: none;
+        }
+    }
+}
+
+a {
+    color: $trickster-blue;
+}
+
+footer {
+    a {
+        color: lighten($trickster-light-blue, 30%);
+        &:hover {
+            color: lighten($secondary, 30%);
+        }
+    }
+}

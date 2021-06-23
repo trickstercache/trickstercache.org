@@ -1,0 +1,23 @@
+/*
+
+Add styles or override variables from the theme here.
+
+*/
+
+$primary: #dff1f9;
+$secondary: #755102;
+
+$trickster-blue: #369;
+$trickster-light-blue: lighten($trickster-blue, 10%);
+$trickster-dark-blue: darken($trickster-blue, 20%);
+
+// $primary: $trickster-blue;
+// $secondary: $trickster-light-blue;
+
+
+// Navbar
+
+$navbar-dark-color: #444 !default;
+$navbar-dark-hover-color: $secondary !default;
+$navbar-dark-active-color: $trickster-blue !default;
+$navbar-dark-disabled-color: #6c6b6a !default;
