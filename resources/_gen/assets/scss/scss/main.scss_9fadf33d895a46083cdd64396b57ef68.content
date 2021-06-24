@@ -15160,4 +15160,9 @@ footer a {
   footer a:hover {
     color: #fbb315; }
 
+.alert-primary {
+  border-color: #369; }
+  .alert-primary .alert-heading {
+    color: #369; }
+
 /*# sourceMappingURL=main.css.map */

@@ -44,3 +44,10 @@ footer {
         }
     }
 }
+
+.alert-primary {
+    border-color: $trickster-blue;
+    .alert-heading {
+        color: $trickster-blue;
+    }
+}
