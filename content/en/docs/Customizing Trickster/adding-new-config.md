@@ -1,4 +1,10 @@
-# Adding a New Configuration Value
+---
+title: "Adding a New Configuration Value"
+linkTitle: "Adding a New Configuration Value"
+weight: 1
+description: >
+  A short lead description about this content page. It can be **bold** or _italic_ and can be split over multiple paragraphs.
+---
 
 Trickster configurations are defined in `options` packages below each feature package (e.g., `/backends/options`, `caches/options`, etc) and are mapped to `yaml` struct tags.
 

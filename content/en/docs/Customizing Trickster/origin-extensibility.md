@@ -1,4 +1,10 @@
-# Extending Trickster to Support a New Provider
+---
+title: "Extending Trickster to Support a New Provider"
+linkTitle: "Extending Trickster to Support a New Provider"
+weight: 1
+description: >
+  A short lead description about this content page. It can be **bold** or _italic_ and can be split over multiple paragraphs.
+---
 
 Trickster 2.0 was written with extensibility in mind, and should be able to work with any time series database that has an HTTP-based API. In Trickster, we generically refer to our supported TSDB's as Providers. Some Providers are easier to implement and maintain than others, depending upon a host of factors that are covered later in this document. This document is meant to help anyone wishing to extend Trickster to support a new Provider, particularly in gauging the level of effort, understanding what is involved, and implementing the required interfaces and rules.
 

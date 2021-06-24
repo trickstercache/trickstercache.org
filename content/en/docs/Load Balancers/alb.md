@@ -1,4 +1,10 @@
-# Application Load Balancer
+---
+title: "Application Load Balancers"
+linkTitle: "Application Load Balancers"
+weight: 1
+description: >
+  How to contribute to the docs
+---
 
 Trickster 2.0 provides an all-new Application Load Balancer that is easy to configure and provides unique features to aid with Scaling, High Availability and other applications. The ALB supports several balancing Mechanisms:
 

@@ -1,4 +1,10 @@
-# Negative Caching
+---
+title: "Negative Caching"
+linkTitle: "Negative Caching"
+weight: 2
+description: >
+  Low level reference docs for your project.
+---
 
 Negative Caching means to cache undesired HTTP responses for a very short period of time, in order to prevent overwhelming a system that would otherwise scale normally when desired, cacheable HTTP responses are being returned. For example, Trickster can be configured to cache `404 Not Found` or `500 Internal Server Error` responses for a short period of time, to ensure that a thundering herd of HTTP requests for a non-existent object, or unexpected downtime of a critical service, do not create an i/o bottleneck in your application pipeline.
 

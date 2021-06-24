@@ -1,7 +1,7 @@
 ---
-title: "Reference"
-linkTitle: "Reference"
-weight: 9
+title: "Caching"
+linkTitle: "Caching"
+weight: 3
 description: >
   Low level reference docs for your project.
 ---

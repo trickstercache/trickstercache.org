@@ -1,4 +1,10 @@
-# Health Checks
+---
+title: "Health Checks"
+linkTitle: "Health Checks"
+weight: 1
+description: >
+  How to contribute to the docs
+---
 
 ## Trickster Service Health - Ping Endpoint
 

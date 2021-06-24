@@ -1,7 +1,6 @@
-
 ---
-title: "Core Tasks"
-linkTitle: "Core Tasks"
+title: "Paths"
+linkTitle: "Paths"
 weight: 6
 date: 2017-01-05
 description: >

@@ -1,7 +1,7 @@
 ---
-title: "Contribution Guidelines"
-linkTitle: "Contribution Guidelines"
-weight: 10
+title: "Load Balancers"
+linkTitle: "Load Balancers"
+weight: 4
 description: >
   How to contribute to the docs
 ---

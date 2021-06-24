@@ -1,4 +1,10 @@
-# Cache Options
+---
+title: "Cache Options"
+linkTitle: "Cache Options"
+weight: 1
+description: >
+  Low level reference docs for your project.
+---
 
 ## Supported Caches
 

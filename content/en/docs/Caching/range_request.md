@@ -1,4 +1,11 @@
-# Byte Range Request Support
+---
+title: "Byte Range Request Support"
+linkTitle: "Byte Range Request Support"
+weight: 2
+description: >
+  A short lead description about this content page. It can be **bold** or _italic_ and can be split over multiple paragraphs.
+---
+
 
 Trickster's HTTP Reverse Proxy Cache offers best-in-class acceleration and caching of Byte Range Requests.
 

@@ -1,4 +1,11 @@
-# Collapsed Forwarding
+---
+title: "Collapsed Forwarding"
+linkTitle: "Collapsed Forwarding"
+weight: 2
+description: >
+  Low level reference docs for your project.
+---
+
 
 Collapsed Forwarding is feature common among Reverse Proxy Cache solutions like Squid, Varnish and Apache Traffic Server. It works by ensuring only a single request to the upstream origin is performed for any object on a cache miss or revalidation attempt, no matter how many users are requesting the object at the same time.
 
