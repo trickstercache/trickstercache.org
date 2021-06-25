@@ -1,4 +1,12 @@
-# Trickster 2.0
+---
+title: "Trickster 2.0"
+linkTitle: "Trickster 2.0"
+weight: 2
+date: 2021-06-25
+description: >
+  See your project in action!
+---
+
 
 ## What's Improved
 

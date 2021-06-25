@@ -12,6 +12,24 @@
     border: 1px #ddd solid;
 }
 
+// main landing page
+.td-main #td-cover-block-0 {
+    background: rgb(51,102,153);
+}
+
+.td-overlay--dark::after {
+    background-color: transparent;
+}
+
+.td-navbar-cover {
+    background: $primary !important;
+}
+
+.td-navbar-cover .nav-link {
+    text-shadow: none;
+}
+
+
 // Left nav
 
 .td-sidebar-nav a {
@@ -50,4 +68,8 @@ footer {
     .alert-heading {
         color: $trickster-blue;
     }
+}
+
+.pageinfo-primary {
+    border-color: $trickster-light-blue;    
 }

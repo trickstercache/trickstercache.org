@@ -1,14 +1,14 @@
 ---
-title: About Trickster
-linkTitle: About
+title: "About Trickster"
+linkTitle: "About"
 menu:
   main:
-    weight: 10
+    weight: 40
 
 ---
 
 
-{{< blocks/cover title="About Goldydocs" image_anchor="bottom" height="min" >}}
+{{< blocks/cover title="About Trickster" image_anchor="bottom" height="min" >}}
 
 <p class="lead mt-5">A sample site using the Docsy Hugo theme.
 </p>

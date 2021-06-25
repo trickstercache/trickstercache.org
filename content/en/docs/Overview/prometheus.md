@@ -1,4 +1,11 @@
-# Prometheus Support
+---
+title: "Prometheus Support"
+linkTitle: "Prometheus Support"
+weight: 1
+date: 2021-06-25
+description: >
+  See your project in action!
+---
 
 Trickster fully supports accelerating Prometheus, which we consider our First Class backend provider. They work great together, so you should give it a try!
 

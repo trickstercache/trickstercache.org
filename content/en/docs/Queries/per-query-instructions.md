@@ -1,4 +1,11 @@
-# Per-Query Time Series Instructions
+---
+title: "Per-Query Time Series Instructions"
+linkTitle: "Per-Query Time Series Instructions"
+weight: 1
+date: 2021-06-25
+description: >
+  See your project in action!
+---
 
 Beginning with Trickster v1.1, certain features like Fast Forward can be toggled a per-query basis, to assist with compatibility in your environment. This allows the drafters of a query to have some say over toggling these features on queries they find to have issues running through Trickster. This is done by adding directives via query comments. For example, in Prometheus, you can end any query with `# any comment following a hashtag`, so you can place the per-query instructions there.
 

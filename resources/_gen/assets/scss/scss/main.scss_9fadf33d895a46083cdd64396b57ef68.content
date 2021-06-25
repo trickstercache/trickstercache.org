@@ -15143,6 +15143,18 @@ body:lang(fa) {
   background: #fff;
   border: 1px #ddd solid; }
 
+.td-main #td-cover-block-0 {
+  background: #336699; }
+
+.td-overlay--dark::after {
+  background-color: transparent; }
+
+.td-navbar-cover {
+  background: #dff1f9 !important; }
+
+.td-navbar-cover .nav-link {
+  text-shadow: none; }
+
 .td-sidebar-nav a:hover {
   color: #755102; }
 
@@ -15164,5 +15176,8 @@ footer a {
   border-color: #369; }
   .alert-primary .alert-heading {
     color: #369; }
+
+.pageinfo-primary {
+  border-color: #4080bf; }
 
 /*# sourceMappingURL=main.css.map */

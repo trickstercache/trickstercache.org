@@ -1,4 +1,11 @@
-# Supported Providers
+---
+title: "Supported Providers"
+linkTitle: "Supported Providers"
+weight: 1
+date: 2021-06-25
+description: >
+  See your project in action!
+---
 
 Trickster currently supports the following Providers:
 

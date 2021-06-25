@@ -1,4 +1,12 @@
-# Rule Backend
+---
+title: "Rule Backend"
+linkTitle: "Rule Backend"
+weight: 1
+date: 2021-06-25
+description: >
+  See your project in action!
+---
+
 
 The Rule Backend is not really a true Backend; it only routes inbound requests to other configured Backends, based on how they match against the Rule's cases.
 

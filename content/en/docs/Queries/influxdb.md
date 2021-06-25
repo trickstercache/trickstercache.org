@@ -1,4 +1,11 @@
-# InfluxDB Support
+---
+title: "InfluxDB Support"
+linkTitle: "InfluxDB Support"
+weight: 1
+date: 2021-06-25
+description: >
+  See your project in action!
+---
 
 Trickster provides support for accelerating InfluxDB queries that return time series data normally visualized on a dashboard. Acceleration works by using the Time Series Delta Proxy Cache to minimize the number and time range of queries to the upstream InfluxDB server.
 

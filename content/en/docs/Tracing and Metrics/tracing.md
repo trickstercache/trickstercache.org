@@ -1,4 +1,12 @@
-# Tracing support
+---
+title: "Tracing support"
+linkTitle: "Tracing support"
+weight: 2
+date: 2021-06-25
+description: >
+  See your project in action!
+---
+
 
 Trickster has minimal support for OpenTelemetry. See <https://github.com/trickstercache/trickster/issues/36>
 

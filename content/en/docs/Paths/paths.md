@@ -1,4 +1,11 @@
-# Customizing HTTP Path Behavior
+---
+title: "Customizing HTTP Path Behavior"
+linkTitle: "Customizing HTTP Path Behavior"
+weight: 1
+date: 2021-06-25
+description: >
+  See your project in action!
+---
 
 Trickster supports, via configuration, customizing the upstream request and downstream response behavior on a per-Path, per-Backend basis, by providing a `paths` configuration section for each backend configuration. Here are the basic capabilities for customizing Path behavior:
 

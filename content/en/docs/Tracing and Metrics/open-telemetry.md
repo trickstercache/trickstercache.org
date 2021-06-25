@@ -1,4 +1,12 @@
-# Distributed Tracing via OpenTelemetry
+---
+title: "Distributed Tracing via OpenTelemetry"
+linkTitle: "Distributed Tracing via OpenTelemetry"
+weight: 2
+date: 2021-06-25
+description: >
+  See your project in action!
+---
+
 
 Trickster instruments Distributed Tracing with [OpenTelemetry](http://opentelemetry.io/), which is a currently emergent, comprehensive observability stack that is in Public Beta. We import the [OpenTelemetry golang packages](https://github.com/open-telemetry/opentelemetry-go) to instrument support for tracing.
 

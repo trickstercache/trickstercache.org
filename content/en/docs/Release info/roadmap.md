@@ -1,4 +1,11 @@
-# Trickster Roadmap
+---
+title: "Trickster Roadmap"
+linkTitle: "Trickster Roadmap"
+weight: 3
+date: 2021-06-25
+description: >
+  See your project in action!
+---
 
 The roadmap for Trickster in 2021 focuses on delivering Trickster versions 2.0 and 2.1, as well as new supporting applications and cloud native integrations. Additional details for Q3 and Q4 will be provided as the year progresses.
 
