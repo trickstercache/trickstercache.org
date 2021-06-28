@@ -1,9 +1,9 @@
 ---
 title: "Try Trickster with Docker Compose"
-linkTitle: "Try Trickster with Docker Compose"
+linkTitle: "Try Trickster"
 weight: 1
 description: >
-  A short lead description about this content page. It can be **bold** or _italic_ and can be split over multiple paragraphs.
+  Try Trickster with Docker Compose and minimal setup.
 ---
 
 <!-- from https://github.com/trickstercache/trickster/blob/main/examples/docker-compose/README.md -->

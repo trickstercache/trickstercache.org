@@ -15143,6 +15143,9 @@ body:lang(fa) {
   background: #fff;
   border: 1px #ddd solid; }
 
+.td-cover-block--height-full {
+  min-height: 200px; }
+
 .td-main #td-cover-block-0 {
   background: #336699; }
 
@@ -15154,6 +15157,21 @@ body:lang(fa) {
 
 .td-navbar-cover .nav-link {
   text-shadow: none; }
+
+.td-box--5 {
+  background-color: #d9d9d9; }
+
+.logo-container {
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap; }
+  .logo-container .logo {
+    width: 15%;
+    max-width: 180px;
+    max-height: 180px;
+    object-fit: contain;
+    min-width: 150px;
+    padding: 1rem 2rem; }
 
 .td-sidebar-nav a:hover {
   color: #755102; }

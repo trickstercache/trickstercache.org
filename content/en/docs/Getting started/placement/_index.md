@@ -1,8 +1,8 @@
 ---
 title: "Where to Place Trickster"
-linkTitle: "Where to Place Trickster"
+linkTitle: "Trickster Placement"
 description: >
-  A short lead description about this content page. It can be **bold** or _italic_ and can be split over multiple paragraphs.
+  Choose the best Trickster placement for your project.
 ---
 
 Depending upon the size of your existing or planned deployment, there are several placement configurations available. These designs are suggestions based on common usage, and you may find alternative or hybrid placement configurations that make the most sense for your situation, based on the activity of your Dashboard and TSDB instance(s).

@@ -4,7 +4,7 @@ linkTitle: "Rule Backend"
 weight: 1
 date: 2021-06-25
 description: >
-  See your project in action!
+  How to write rules for Trickster's Rule Backend.
 ---
 
 

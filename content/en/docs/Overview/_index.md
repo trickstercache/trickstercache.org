@@ -3,16 +3,11 @@ title: "Overview"
 linkTitle: "Overview"
 weight: 1
 description: >
-  Here's where your user finds out if your project is for them.
+  Get a high-level introduction to Trickster.
 ---
 
-{{% pageinfo %}}
-This is a placeholder page that shows you how to use this template site.
-{{% /pageinfo %}}
 
-# Overview
-
-Speed up your applications with Trickster's HTTP reverse proxy caching and  dashboard query accelerator for time series databases.
+Speed up your applications with Trickster's HTTP reverse proxy caching and dashboard query accelerator for time series databases.
 Trickster's two-pronged approach reduces unnecessary data transfer between the client, dashboard server, HTTP endpoints, and databases.
 
 Customizable HTTP reverse proxy caching leverages features such as metrics, health checks, and distributed tracing to help you get the most out of each data request. And with two types of collapsed forwarding, you can ensure that your application is making only the necessary data requests.
@@ -80,8 +75,7 @@ Trickster's Fast Forward feature ensures that even with step boundary normalizat
 
 ## Next steps
 
-Give your users next steps from the Overview. For example:
+Ready to try it out?
 
-* [Getting Started](/docs/getting-started/): Get started with $project
-* [Examples](/docs/examples/): Check out some example code!
+* [Getting Started](/docs/getting-started/): Get started with Trickster
 

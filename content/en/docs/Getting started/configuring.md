@@ -1,8 +1,8 @@
 ---
 title: "Configuring Trickster"
-linkTitle: " Configuring Trickster"
+linkTitle: " Configuring"
 description: >
-  A short lead description about this content page. It can be **bold** or _italic_ and can be split over multiple paragraphs.
+  Learn how to configure Trickster for your project.
 ---
 
 There are 3 ways to configure Trickster, listed here in the order of evaluation.
