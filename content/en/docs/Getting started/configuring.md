@@ -15,7 +15,7 @@ Note that while the Configuration file provides a very robust number of knobs yo
 
 ## Internal Defaults
 
-Internal Defaults are set for all configuration values, and are overridden by the configuration methods described below. All Internal Defaults are described in [examples/conf/example.full.yaml](../examples/conf/example.full.yaml) comments.
+Internal Defaults are set for all configuration values, and are overridden by the configuration methods described below. All Internal Defaults are described in [examples/conf/example.full.yaml](https://github.com/trickstercache/trickster/blob/main/examples/conf/example.full.yaml) comments.
 
 ## Configuration File
 
@@ -23,7 +23,7 @@ Trickster accepts a `-config /path/to/trickster.yaml` command line argument to s
 
 When a `-config` parameter is not provided, Trickster will check for the presence of a config file at `/etc/trickster/trickster.yaml` and load it if present, or proceed with the Internal Defaults if not present.
 
-Refer to [examples/conf/example.full.yaml](../examples/conf/example.full.yaml) for full documentation on format of a configuration file.
+Refer to [examples/conf/example.full.yaml](https://github.com/trickstercache/trickster/blob/main/examples/conf/example.full.yaml) for full documentation on format of a configuration file.
 
 ## Environment Variables
 

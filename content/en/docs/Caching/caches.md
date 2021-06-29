@@ -3,12 +3,12 @@ title: "Cache Options"
 linkTitle: "Cache Options"
 weight: 1
 description: >
-  Low level reference docs for your project.
+  Trickster supports a number of caches.
 ---
 
 ## Supported Caches
 
-There are several cache types supported by Trickster
+Trickster supports several cache types:
 
 * In-Memory (default)
 * Filesystem
@@ -16,7 +16,7 @@ There are several cache types supported by Trickster
 * BadgerDB
 * Redis (basic, cluster, and sentinel)
 
-The sample configuration ([examples/conf/example.full.yaml](../examples/conf/example.full.yaml)) demonstrates how to select and configure a particular cache type, as well as how to configure generic cache configurations such as Retention Policy.
+The sample configuration, [trickster/examples/conf/example.full.yaml](https://github.com/trickstercache/trickster/blob/main/examples/conf/example.full.yaml), demonstrates how to select and configure a particular cache type, as well as how to configure generic cache configurations such as Retention Policy.
 
 ## In-Memory
 

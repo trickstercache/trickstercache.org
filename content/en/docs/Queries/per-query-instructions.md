@@ -4,7 +4,7 @@ linkTitle: "Per-Query Time Series Instructions"
 weight: 1
 date: 2021-06-25
 description: >
-  See your project in action!
+  Specify instructions for each query.
 ---
 
 Beginning with Trickster v1.1, certain features like Fast Forward can be toggled a per-query basis, to assist with compatibility in your environment. This allows the drafters of a query to have some say over toggling these features on queries they find to have issues running through Trickster. This is done by adding directives via query comments. For example, in Prometheus, you can end any query with `# any comment following a hashtag`, so you can place the per-query instructions there.
@@ -13,20 +13,25 @@ Beginning with Trickster v1.1, certain features like Fast Forward can be toggled
 
 ### Fast Forward Disable
 
-Instruction `trickster-fast-forward`
+To disable fast forward, use the instruction `trickster-fast-forward`. You can only use this feature with Prometheus as other time series do not currently implement Fast Forward. Use as in the following example:
 
-Supported for: Prometheus (other time series do not currently implement Fast Forward)
+```
+go_goroutines{job="trickster"}  # trickster-fast-forward:off
+```
 
-Usage: `go_goroutines{job="trickster"}  # trickster-fast-forward:off`
+{{% alert title="Note" %}}
+> You can only use `trickster-fast-forward` to disable fast forward. A value of `on` will have no effect.
+{{% /alert %}}
 
-Notes: This can only be used to disable fast forward. A value of `on` will have no effect.
 
 ### Backfill Tolerance
 
-Instruction `trickster-backfill-tolerance`
+To set the backfill tolerance, use the instruction `trickster-backfill-tolerance`. Trickster supports setting the backfill tolerance for all time series backends. Use as in the following example:
 
-Supported for: All time series backends
+```
+SELECT time, count(*) FROM table  # trickster-backfill-tolerance:120
+```
 
-Usage: `SELECT time, count(*) FROM table  # trickster-backfill-tolerance:120`
-
-Notes: This overrides the backfill tolerance value for this query by the specified value (in seconds). Only integers are accepted.
+{{% alert title="Note" %}}
+> Notes: This overrides the backfill tolerance value for this query by the specified value (in seconds). Only integers are accepted.
+{{% /alert %}}

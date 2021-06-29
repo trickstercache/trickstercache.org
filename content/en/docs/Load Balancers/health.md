@@ -3,7 +3,7 @@ title: "Health Checks"
 linkTitle: "Health Checks"
 weight: 1
 description: >
-  How to contribute to the docs
+  Keep your Trickster instance running for peak performance.
 ---
 
 ## Trickster Service Health - Ping Endpoint
@@ -78,7 +78,7 @@ backends:
 
 ```
 
-See more examples in [example.full.yaml](../examples/conf/example.full.yaml).
+See more examples in [examples/conf/example.full.yaml](https://github.com/trickstercache/trickster/blob/main/examples/conf/example.full.yaml).
 
 ## Health Check Integrations with Application Load Balancers
 
@@ -104,4 +104,4 @@ backends:
 
 ## Other Ways to Monitor Health
 
-In addition to the out-of-the-box health checks to determine up-or-down status, you may want to setup alarms and thresholds based on the metrics instrumented by Trickster. See [metrics.md](metrics.md) for collecting performance metrics about Trickster.
+In addition to the out-of-the-box health checks to determine up-or-down status, you may want to setup alarms and thresholds based on the metrics instrumented by Trickster. See [Metrics](/docs/tracing-and-metrics/metrics/) for collecting performance metrics about Trickster.

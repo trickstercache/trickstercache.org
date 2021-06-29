@@ -3,7 +3,7 @@ title: "Application Load Balancers"
 linkTitle: "Application Load Balancers"
 weight: 1
 description: >
-  How to contribute to the docs
+  Solve for scalabilty with Trickster's state-of-the-art Application Load Balancer.
 ---
 
 Trickster 2.0 provides an all-new Application Load Balancer that is easy to configure and provides unique features to aid with Scaling, High Availability and other applications. The ALB supports several balancing Mechanisms:
@@ -82,13 +82,13 @@ backends:
 
 Here is the visual representation of this configuration:
 
-<img src="./images/alb-rr.png" width="800">
+<img src="alb-rr.png" alt="Diagram of Trickster round robin mechanism" width="800">
 
 ### Time Series Merge
 
 The recommended application for using the **Time Series Merge** mechanism is as a High Availability solution. In this application, Trickster fans the client request out to multiple redundant tsdb endpoints and merges the responses back into a single document for the client. If any of the endpoints are down, or have gaps in their response (due to prior downtime), the Trickster cache along with the data from the healthy endpoints will ensure the client receives the most complete response possible. Instantaneous downtime of any Backend will result in a warning being injected in the client response.
 
-Separate from an HA use case, it is possible to Time Series Merge as a Federation broker that merges responses from different, non-redundant tsdb endpoints; for example, to aggregate metrics from a solution running clusters in multiple regions, with separate, in-region-only tsdb deployments. In this use case, it is recommended to [inject labels](./prometheus.md#injecting-labels) into the responses to protect against data collisions across series. Label injection is demonstrated in the snippet below.
+Separate from an HA use case, it is possible to Time Series Merge as a Federation broker that merges responses from different, non-redundant tsdb endpoints; for example, to aggregate metrics from a solution running clusters in multiple regions, with separate, in-region-only tsdb deployments. In this use case, it is recommended to [inject labels](/docs/queries/prometheus/#injecting-labels) into the responses to protect against data collisions across series. Label injection is demonstrated in the snippet below.
 
 #### Providers Supporting Time Series Merge
 
@@ -98,7 +98,7 @@ Trickster currently supports Time Series Merging for the following TSDB Provider
 |---|
 | Prometheus |
 
-We hope to support more TSDB's in the future and welcome any help!
+We hope to support more TSDBs in the future and welcome any help!
 
 #### Example TS Merge Configuration
 
@@ -157,7 +157,7 @@ backends:
 
 Here is the visual representation of a basic TS Merge configuration:
 
-<img src="./images/alb-tsm.png" width="800">
+<img src="alb-tsm.png" alt="Diagram of Trickster timeseries merge configuration" width="800">
 
 ### First Response
 
@@ -188,7 +188,7 @@ backends:
 
 Here is the visual representation of this configuration:
 
-<img src="./images/alb-fr.png" width="800">
+<img src="alb-fr.png" alt="Diagram of Trickster first response configuration" width="800">
 
 ### First Good Response
 
@@ -224,7 +224,7 @@ backends:
 
 Here is the visual representation of this configuration:
 
-<img src="./images/alb-fgr.png" width="800">
+<img src="alb-fgr.png" alt="Diagram of Trickster first good response configuration" width="800">
 
 ### Newest Last-Modified
 
@@ -259,11 +259,11 @@ backends:
 
 Here is the visual representation of this configuration:
 
-<img src="./images/alb-nlm.png" width="800">
+<img src="alb-nlm.png" alt="Diagram of Trickster last-modified configuration" width="800">
 
 ## Maintaining Healthy Pools With Automated Health Check Integrations
 
-Health Checks are configured per-Backend as described in the [Health documentation](./health.md). Each Backend's health checker will notify all ALB pools of which it is a member when its health status changes, so long as it has been configured with a [health check interval](./health#example+health+check+configuration+for+use+in+alb) for automated checking. When an ALB is notified that the state of a pool member has changed, the ALB will reconstruct its list of healthy pool members before serving the next request.
+Health Checks are configured per-Backend as described in the [Health documentation](/docs/load-balancers/health/). Each Backend's health checker will notify all ALB pools of which it is a member when its health status changes, so long as it has been configured with a [health check interval](/docs/load-balancers/health/#example+health+check+configuration+for+use+in+alb) for automated checking. When an ALB is notified that the state of a pool member has changed, the ALB will reconstruct its list of healthy pool members before serving the next request.
 
 ## Health Check States
 
@@ -273,7 +273,7 @@ A backend will report one of three possible health states to its ALBs: `unavaila
 
 Each ALB has a configurable `healthy_floor` value, which is the threshold for determining which pool members are included in the healthy pool, based on their instantaneous health state. The `healthy_floor` represents the minimum acceptable health state value for inclusion in the healthy pool. The default `healthy_floor` value is `0`, meaning Backends in a state `>= 0` (`unknown` and `available`) are included in the healthy pool. Setting `healthy_floor: 1` would include only `available` Backends, while a value of `-1` will include all backends in the configured pool, including those marked as `unavailable`.
 
-Backends that do not have a [health check interval](./health#example+health+check+configuration+for+use+in+alb) configured will remain in a permanent state of `unknown`. Backends will also be in an `unknown` state from the time Trickster starts until the first of any configured automated health check is completed. Note that if an ALB is configured with `healthy_floor: 1`, any pool members that are not configured with an automated health check interval will never be included in the ALB's healthy pool, as their state is permanently `0`.
+Backends that do not have a [health check interval](/docs/load-balancers/health/#example+health+check+configuration+for+use+in+alb) configured will remain in a permanent state of `unknown`. Backends will also be in an `unknown` state from the time Trickster starts until the first of any configured automated health check is completed. Note that if an ALB is configured with `healthy_floor: 1`, any pool members that are not configured with an automated health check interval will never be included in the ALB's healthy pool, as their state is permanently `0`.
 
 ### Example ALB Configuration Routing Only To Known Healthy Backends
 
@@ -303,7 +303,7 @@ backends:
 
 ## All-Backends Health Status Page
 
-Trickster 2.0 provides a new global health status page available at `http://trickster:metrics-port/trickster/health` or (the configured `health_handler_path`).
+Trickster 2.0 provides a new global health status page available at `http://trickster:metrics-port/trickster/health` (or the configured `health_handler_path`).
 
 The global status page will display the health state about all backends configured for automated health checking. Here is an example configuration and a possible corresponding status page output:
 

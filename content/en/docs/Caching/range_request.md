@@ -3,11 +3,8 @@ title: "Byte Range Request Support"
 linkTitle: "Byte Range Request Support"
 weight: 2
 description: >
-  A short lead description about this content page. It can be **bold** or _italic_ and can be split over multiple paragraphs.
+  Trickster's HTTP Reverse Proxy Cache offers best-in-class acceleration and caching of Byte Range Requests.
 ---
-
-
-Trickster's HTTP Reverse Proxy Cache offers best-in-class acceleration and caching of Byte Range Requests.
 
 Much like its Time Series Delta Proxy Cache, Trickster's Reverse Proxy Cache will determine what ranges are cached, and only request from the origin any uncached ranges needed to service the client request, reconstituting the ranges within the cache object. This ensures minimal response time for all Range requests.
 

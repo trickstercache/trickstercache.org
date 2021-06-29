@@ -9,7 +9,7 @@ description: >
 
 Trickster currently supports the following providers:
 
-### <img src="logo.svg" width=16 /> Generic HTTP Reverse Proxy Cache
+### <img src="logo.svg" alt="Trickster logo" width=16 /> Generic HTTP Reverse Proxy Cache
 
 Trickster operates as a fully-featured and highly-customizable reverse proxy cache, designed to accelerate and scale upstream endpoints like API services and other simple http services. Specify `'reverseproxycache'` or just `'rpc'` as the Provider when configuring Trickster.
 
@@ -17,23 +17,23 @@ Trickster operates as a fully-featured and highly-customizable reverse proxy cac
 
 ## Time Series Databases
 
-### <img src="prom_logo_60.png" width=16 /> Prometheus
+### <img src="prom_logo_60.png" alt="Prometheus logo" width=16 /> Prometheus
 
 Trickster fully supports the [Prometheus HTTP API (v1)](https://prometheus.io/docs/prometheus/latest/querying/api/). Specify `'prometheus'` as the Provider when configuring Trickster. Trickster supports [label injection](./prometheus.md) for Prometheus.
 
-### <img src="influx_logo_60.png" width=16 /> InfluxDB
+### <img src="influx_logo_60.png" alt="InfluxDB logo" width=16 /> InfluxDB
 
 Trickster supports for InfluxDB. Specify `'influxdb'` as the Provider when configuring Trickster.
 
 See the [InfluxDB Support Document](./influxdb.md) for more information.
 
-### <img src="clickhouse_logo.png" width=16 /> ClickHouse
+### <img src="clickhouse_logo.png" alt="ClickHouse logo" width=16 /> ClickHouse
 
 Trickster supports accelerating ClickHouse time series. Specify `'clickhouse'` as the Provider when configuring Trickster.
 
 See the [ClickHouse Support Document](./clickhouse.md) for more information.
 
-### <img src="irondb_logo_60.png" width=16 /> Circonus IRONdb
+### <img src="irondb_logo_60.png" alt="IRONdb logo" width=16 /> Circonus IRONdb
 
 Support has been included for the Circonus IRONdb time-series database. If Grafana is used for visualizations, the Circonus IRONdb data source plug-in for Grafana can be configured to use Trickster as its data source. All IRONdb data retrieval operations, including CAQL queries, are supported.
 

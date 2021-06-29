@@ -3,12 +3,12 @@ title: "Trickster Caching Retention Policies"
 linkTitle: "Trickster Caching Retention Policies"
 weight: 2
 description: >
-  A short lead description about this content page. It can be **bold** or _italic_ and can be split over multiple paragraphs.
+  This article covers how long Trickster retains data.
 ---
 
 ## Basic HTTP Backends
 
-Trickster will respect HTTP 1.0, 1.1 and 2.0 caching directives from both the downstream client and the upstream origin when determining object cacheability and TTL. You can override the TTL by setting a custom `Cache-Control` header on a per-[Path Config](./paths.md) basis.
+Trickster will respect HTTP 1.0, 1.1 and 2.0 caching directives from both the downstream client and the upstream origin when determining object cacheability and TTL. You can override the TTL by setting a custom `Cache-Control` header on a per-[Path Config](/docs/paths/paths/) basis.
 
 ### Cache Object Evictions
 
@@ -26,7 +26,7 @@ For time series data responses, Trickster will cache as follows:
 
 ### TTL Settings
 
-TTL settings for each Backend configured in Trickster can be customized independently of each other, and separate TTL configurations are available for timeseries objects, and fast forward data. See [examples/conf/example.full.yaml](../examples/conf/example.full.yaml) for more info on configuring default TTLs.
+TTL settings for each Backend configured in Trickster can be customized independently of each other, and separate TTL configurations are available for timeseries objects, and fast forward data. See [examples/conf/example.full.yaml](https://github.com/trickstercache/trickster/blob/main/examples/conf/example.full.yaml) for more info on configuring default TTLs.
 
 ### Time Series Data Retention
 

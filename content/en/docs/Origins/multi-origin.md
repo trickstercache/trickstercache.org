@@ -1,10 +1,10 @@
 ---
-title: "Using Multiple Backends with a single Trickster instance"
+title: "Using Multiple Backends"
 linkTitle: "Using Multiple Backends"
 weight: 1
 date: 2021-06-25
 description: >
-  See your project in action!
+  A single Trickster instance can use multiple backends.
 ---
 
 Trickster supports proxying to multiple backends in a single Trickster instance, by examining the inbound request and using a multiplexer to direct the proxied request to the correct upstream origin, in the same way that web servers support virtual hosting.

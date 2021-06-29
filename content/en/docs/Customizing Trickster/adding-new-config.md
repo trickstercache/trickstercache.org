@@ -3,7 +3,7 @@ title: "Adding a New Configuration Value"
 linkTitle: "Adding a New Configuration Value"
 weight: 1
 description: >
-  A short lead description about this content page. It can be **bold** or _italic_ and can be split over multiple paragraphs.
+  Find out where to add new configuration value references.
 ---
 
 Trickster configurations are defined in `options` packages below each feature package (e.g., `/backends/options`, `caches/options`, etc) and are mapped to `yaml` struct tags.
@@ -28,10 +28,10 @@ All new values that you add should have accompanying unit tests to ensure the mo
 
 The feature should be documented under `./docs` directory, in a suitable existing or new markdown file based on the nature of the feature. The documentation should show the key example configuration options and describe their expected results, and point to the example config file for more information.
 
-The [example config file](../examples/conf/example.full.yaml) should be updated to include the exhaustive description and options for the configuration value(s).
+The [example config file](https://github.com/trickstercache/trickster/blob/main/examples/conf/example.full.yaml) should be updated to include the exhaustive description and options for the configuration value(s).
 
 ## Deployment
 
-The `./deply/kube/configmap.yaml` must be updated to include the new configuration option(s). Generally this file contains a copy/paste of [example.full.yaml](../examples/conf/example.full.yaml).
+The `./deply/kube/configmap.yaml` must be updated to include the new configuration option(s). Generally this file contains a copy/paste of [example.full.yaml](https://github.com/trickstercache/trickster/blob/main/examples/conf/example.full.yaml).
 
 The `./deploy/helm/trickster/values.yaml` file must be updated to mirror the configuration option(s) in `example.full.yaml`, and `./deploy/helm/trickster/templates/configmap.yaml` must be updated to map any new `yamlCaseValues` to their respective snake case values for config file generation via the template.

@@ -1,7 +1,7 @@
 ---
 title: "Release Info"
 linkTitle: "Release Info"
-weight: 7
+weight: 9
 date: 2021-06-25
 description: >
   What can your user do with your project?

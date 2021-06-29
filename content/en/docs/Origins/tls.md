@@ -4,11 +4,8 @@ linkTitle: "TLS Support"
 weight: 1
 date: 2021-06-25
 description: >
-  See your project in action!
+  Trickster supports Transport Layer Security on both the frontend server and backend clients.
 ---
-
-
-Trickster supports TLS on both the frontend server and backend clients.
 
 ## Basics
 
@@ -20,7 +17,7 @@ frontend:
   tls_listen_port: 8483
 ```
 
-Note, Trickster will only start listening on the TLS port if at least one origin has a valid certificate and key configured.
+Note, Trickster only starts listening on the TLS port if at least one origin has a valid certificate and key configured.
 
 Each origin section of a Trickster config file can be augmented with the optional `tls` section to modify TLS behavior for front-end and back-end requests. For example:
 
@@ -38,7 +35,7 @@ backends:
       client_key_path: '/path/to/client/key.pem'
 ```
 
-## Server Configs - used when responding to clients
+## Server Configuration when responding to clients
 
 Each backend can handle encryption with exactly 1 certificate and key pair, as configured in the TLS section of the backend config (demonstrated above).
 
@@ -46,7 +43,7 @@ If the path to any configured Certificate or Key file is unreachable or unparsab
 
 You may use the same TLS certificate and key for multiple backends, depending upon how your Trickster configurations are laid out. Any certificates configured by Trickster must match the hostname header of the inbound http request (exactly, or by wildcard interpolation), or clients will likely reject the certificate for security issues.
 
-## Client Configs - used when proxying to an origin
+## Client Configs when proxying to an origin
 
 Each backend's TLS configuration can also configure the https client used for making requests against the origin as demonstrated above.
 
@@ -54,4 +51,4 @@ Each backend's TLS configuration can also configure the https client used for ma
 
 `certificate_authority_paths` will provide the http client with a list of certificate authorities (used in addition to any OS-provided root CA's) to use when determining the trust of an upstream origin's TLS certificate. In all cases, the Root CA's installed to the operating system on which Trickster is running are used for trust by the client.
 
-To us Mutual Authentication with an upstream origin server, configure Trickster with Client Certificates using `client_cert_path` and `client_key_path` parameters, as shown above. You will likely need to also configure a custom CA in `certificate_authority_paths` to represent your certificate signer, unless it has been added to the underlying Operating System's CA list.
+To use Mutual Authentication with an upstream origin server, configure Trickster with Client Certificates using `client_cert_path` and `client_key_path` parameters, as shown above. You will likely need to also configure a custom CA in `certificate_authority_paths` to represent your certificate signer, unless it has been added to the underlying Operating System's CA list.

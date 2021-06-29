@@ -4,7 +4,7 @@ linkTitle: "Timeseries Request Sharding"
 weight: 1
 date: 2021-06-25
 description: >
-  See your project in action!
+  This article covers the available sharding configurations.
 ---
 
 ## Overview
@@ -17,19 +17,19 @@ Trickster support three main mechanisms for sharding:
 
 ----
 
- - Maximum Timestamps Per Shard - Trickster calculates number of expected unique timestamps in the response by dividing the requested time range size by the step cadence, and then subdivides the time ranges so that each sharded request's time range will return no more timestamps than the configured maximum.
+ - **Maximum Timestamps Per Shard:** Trickster calculates the number of expected unique timestamps in the response by dividing the requested time range size by the step cadence, and then subdivides the time ranges so that each sharded request's time range will return no more timestamps than the configured maximum.
 
-<img src="./images/sharding_points.png" width="760">
+<img src="sharding_points.png" alt="Diagram of Trickster's subdivisions based on timestamps" width="760">
 
- - Maximum Time Range Width Per Shard - Trickster inspects each needed time range, and subdivides them such that each sharded request's time range duration is no larger than the configured maximum.
+ - **Maximum Time Range Width Per Shard:** Trickster inspects each needed time range, and subdivides them such that each sharded request's time range duration is no larger than the configured maximum.
 
-<img src="./images/sharding_duration.png" width="760">
+<img src="sharding_duration.png" alt="Diagram of Trickster's subdivisions based on time range duration" width="760">
 
- - Epoch-Aligned Maximum Time Range Width Per Shard - Trickster inspects each needed time range, and subdivides them such that each sharded request's time range duration is no larger than the configured maximum, while also ensuring that each shard's time boundaries are aligned to the Epoch based on the configured shard step size.
+ - **Epoch-Aligned Maximum Time Range Width Per Shard:** Trickster inspects each needed time range, and subdivides them such that each sharded request's time range duration is no larger than the configured maximum, while also ensuring that each shard's time boundaries are aligned to the Epoch based on the configured shard step size.
 
-<img src="./images/sharding_step.png" width="760">
+<img src="sharding_step.png" alt="Diagram of Trickster's subdivisions based on time range duration" width="760">
 
-<img src="./images/sharding_duration_and_step.png" width="760">
+<img src="sharding_duration_and_step.png" alt="Diagram of Trickster making sure that shard time boundaries are aligned to the shard step size" width="760">
 
 ## Configuring
 

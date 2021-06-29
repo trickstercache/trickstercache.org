@@ -3,7 +3,7 @@ title: "Collapsed Forwarding"
 linkTitle: "Collapsed Forwarding"
 weight: 2
 description: >
-  Low level reference docs for your project.
+  Keep requests efficient with collapsed forwarding.
 ---
 
 
@@ -17,7 +17,7 @@ Basic Collapsed Forwarding is the default functionality for Trickster, and works
 
 The feature is further detailed in the following diagram:
 
-<img src="./images/basic-collapsed-forwarding.png" width="800">
+<img src="basic-collapsed-forwarding.png" alt="Diagram of basic collapsed forwarding in Trickster" width="800">
 
 ## Progressive Collapsed Forwarding
 
@@ -25,19 +25,19 @@ Progressive Collapsed Forwarding (PCF) is an improvement upon the basic version,
 
 The feature is further detailed in the following diagram:
 
-<img src="./images/progressive-collapsed-forwarding-cache.png" width="800">
+<img src="progressive-collapsed-forwarding-cache.png" alt="Diagram of progressive collapsed forwarding in Trickster" width="800">
 
 ### PCF for Proxy-Only Requests
 
-Trickster provides a unique feature that implements PCF in Proxy-Only configurations, to bring the benefits of Collapsed Forwarding to HTTP Paths that are not configured to be routed through the Reverse Proxy Cache. (See [Paths](./paths.md) documentation for more info on routing).
+Trickster provides a unique feature that implements PCF in Proxy-Only configurations, to bring the benefits of Collapsed Forwarding to HTTP Paths that are not configured to be routed through the Reverse Proxy Cache. See the [Paths](/docs/paths/paths/) documentation for more info on routing.
 
 The feature is further detailed in the following diagram:
 
-<img src="./images/progressive-collapsed-forwarding-proxy.png" width="800">
+<img src="progressive-collapsed-forwarding-proxy.png" alt="Diagram of progressive collapsed forwarding for proxy-only requests in Trickster" width="800">
 
 ## How to enable Progressive Collapsed Forwarding
 
-When configuring path configs as described in [Paths Documentation](./paths.md) you simply need to add `progressive_collapsed_forwarding = true` in any path config using the `proxy` or `proxycache` handlers.
+When configuring path configs as described in [Paths Documentation](/docs/paths/paths/) you simply need to add `progressive_collapsed_forwarding = true` in any path config using the `proxy` or `proxycache` handlers.
 
 Example:
 
@@ -57,7 +57,7 @@ origins:
         progressive_collapsed_forwarding: true
 ```
 
-See the [example.full.yaml](../examples/conf/example.full.yaml) for more configuration examples.
+See the [example.full.yaml](https://github.com/trickstercache/trickster/blob/main/examples/conf/example.full.yaml) for more configuration examples.
 
 ## How to test Progressive Collapsed Forwarding
 
