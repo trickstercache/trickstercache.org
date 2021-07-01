@@ -3,7 +3,7 @@ title: "Trickster Caching Retention Policies"
 linkTitle: "Trickster Caching Retention Policies"
 weight: 2
 description: >
-  This article covers how long Trickster retains data.
+  How long Trickster retains data
 ---
 
 ## Basic HTTP Backends

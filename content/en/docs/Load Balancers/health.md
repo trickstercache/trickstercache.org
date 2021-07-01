@@ -3,7 +3,7 @@ title: "Health Checks"
 linkTitle: "Health Checks"
 weight: 1
 description: >
-  Keep your Trickster instance running for peak performance.
+  Keep your Trickster instance running at peak performance.
 ---
 
 ## Trickster Service Health - Ping Endpoint

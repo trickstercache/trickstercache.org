@@ -1,10 +1,10 @@
 ---
 title: "Metrics"
 linkTitle: "Metrics"
-weight: 2
+weight: 1
 date: 2021-06-25
 description: >
-  See your project in action!
+  Check your project performance with Trickster metrics.
 ---
 
 Trickster exposes a Prometheus /metrics endpoint with a customizable listener port number (default is 8481). For more information on customizing the metrics configuration, see [Configuring](/docs/getting-started/configuring.md).

@@ -1,111 +1,69 @@
 ---
-title: "Tracing support"
-linkTitle: "Tracing support"
-weight: 2
+title: "Distributed Tracing via OpenTelemetry"
+linkTitle: "Distributed Tracing via OpenTelemetry"
+weight: 3
 date: 2021-06-25
 description: >
-  See your project in action!
+  Trickster supports a variety of tracing backends.
 ---
 
 
-Trickster has minimal support for OpenTelemetry. See <https://github.com/trickstercache/trickster/issues/36>
+Trickster instruments Distributed Tracing with [OpenTelemetry](http://opentelemetry.io/), which is a currently emergent, comprehensive observability stack that is in Public Beta. We import the [OpenTelemetry golang packages](https://github.com/open-telemetry/opentelemetry-go) to instrument support for tracing.
 
-## Config
-TODO
+As OpenTelemetry evolves to support additional exporter formats, we will work to extend Trickster to support those as quickly as possible. We also make a best effort to update our otel package imports to the latest releases, whenever we publish a new Trickster release. You can check the [go.mod](../go.mod) file to see which release of opentelemetry-go we are is using. In this view, to see which version of otel a specific Trickster release imports, use the branch selector dropdown to switch to the tag corresponding to that version of Trickster.
 
-## Developer Testing
+## Supported Tracing Backends
 
-### Manual with Jaeger
+- Jaeger
+- Jaeger Agent
+- Zipkin
+- Console/Stdout (printed locally by the Trickster process)
 
-1. Start jaeger
+## Configuration
 
-```
-docker run -d --name jaeger \                                                                                                                                                                                                                         ()
-  -e COLLECTOR_ZIPKIN_HTTP_PORT=9411 \
-  -p 5775:5775/udp \
-  -p 6831:6831/udp \
-  -p 6832:6832/udp \
-  -p 5778:5778 \
-  -p 16686:16686 \
-  -p 14268:14268 \
-  -p 9411:9411 \
-  jaegertracing/all-in-one:1.
-```
+Trickster allows the operator to configure multiple tracing configurations, which can be associated into each Backend configuration by name.
 
-2. Star Promsim
+The [example config](https://github.com/trickstercache/trickster/blob/v1.1.2/examples/conf/example.full.yaml#L508) has exhaustive examples of configuring Trickster for distributed tracing.
 
-From the Trickster root run
+## Span List
 
-```
-go run cmd/promsim/main.go
-```
+Trickster can insert several spans to the traces that it captures, depending upon the type and cacheability of the inbound client request, as described in the table below.
 
-3. Start Trickster with tracing test config
+| Span Name              | Observes when Trickster is: |
+| ---------------------- | ------------- |
+| request                | initially handling the client request by a Backend |
+| QueryCache             | querying the cache for an object |
+| WriteCache             | writing an object to the cache |
+| DeltaProxyCacheRequest | handling a Time Series-based client request |
+| FastForward            | making a Fast Forward request for time series data |
+| ProxyRequest           | communicating with an Origin server to fulfill a client request |
+| PrepareFetchReader     | preparing a client response from a cached or Origin response |
+| CacheRevalidation      | revalidating a stale cache object against its Origin |
+| FetchObject            | retrieving a non-time-series object from an Origin |
 
-From the Trickster root run
-```
-make build -o trickster && ./OPATH/trickster -config testdata/test.tracing.conf --log-level debug
-```
+## Tags / Attributes
 
-4. Query
+Trickster supports adding custom tags to every span via the configuration. Depending upon your preferred tracing backend, these may be referred to as attributes. See the [example config](https://github.com/trickstercache/trickster/blob/v1.1.2/examples/conf/example.full.yaml#L548) for examples of adding custom attributes.
 
-```
-curl -i 'localhost:8080/test/api/v1/query_range?query=my_test_query{random_label="57",series_count="1"}&start=2&end=4&step=1'
-```
+Trickster also supports omitting any tags that Trickster inserts by default. The list of default tags are below. For example on the "request" span, an `http.url` tag is attached with the current full URL. In deployments where that tag may introduce too much cardinality in your backend trace storage system, you may wish to omit that tag and rely on the more concise `path` tag. Each tracer config can be provided a string list of tags to omit from traces.
 
-5. Visit Jaeger UI at http://localhost:16686/search
+### Attributes added to top level (request) span
 
-### Testing Utilities
+- `http.url` - the full HTTP request URL
+- `backend.name`
+- `backend.provider`
+- `cache.name`
+- `cache.provider`
+- `router.path` - request path trimmed to the route match path for the request (e.g., `/api/v1/query`), good for aggregating when there are large variations in the full URL path
 
-`tracing.Recorder` is a trace exporter for capturing exported trace spans for inspection later.
+### Attributes added to QueryCache span
 
-`tracing.TestHTTPClient` is an http client with a mock `http.RoundTripper` that calls a test handler for faking http calls.
+- `cache.status` - the lookup status of cache query. See the [cache status reference](./caches.md#cache-status) for a description of the attribute values.
 
-`SetupTestingTracer` uses the above type to setup a mock tracer whose spans can be validated.
+### Attributes added to the FetchRevalidation span
 
-Usage together (from `recorder_test.go`:
-```go
-flush, ctx, recorder, tr := SetupTestingTracer(t, RecorderTracer, 1.0, TestContextValues)
+- `isRange` - is true if the client request includes an HTTP `Range` header
 
-err := tr.WithSpan(ctx, "Testing trace with span",
-        func(ctx context.Context) error {
-                var (
-                        err error
-                )
-                req, _ := http.NewRequest("GET", "https://example.com/test", nil)
+### Attributes added to the FetchObject span
 
-                ctx, req = httptrace.W3C(ctx, req)
-                httptrace.Inject(ctx, req)
-                _, err = TestHTTPClient().Do(req)
-                if err != nil {
-                        return err
-                }
-
-                SpanFromContext(ctx).SetStatus(codes.OK)
-
-                return nil
-
-        })
-
-assert.NoError(t, err, "failed to inject span")
-flush()
-m := make(map[string]string)
-for _, kv := range TestEvents {
-        m[string(kv.Key)] = kv.Value.Emit()
-
-}
-
-for _, span := range recorder.spans {
-        for _, msg := range span.MessageEvents {
-                for _, attr := range msg.Attributes {
-                        key := string(attr.Key)
-                        wantV, ok := m[key]
-                        assert.True(t, ok, "kv not in known good map")
-                        v := attr.Value.Emit()
-                        assert.Equal(t, wantV, v, "Span Message attribute value incorrect")
-
-                }
-        }
-
-}
-```
+- `isPCF` - is true if the origin is configured for [Progressive Collapsed Forwarding](./collapsed-forwarding.md#progressive-collapsed-forwarding)
