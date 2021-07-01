@@ -10,23 +10,22 @@ menu:
 
 {{< blocks/cover title="About Trickster" image_anchor="bottom" height="min" >}}
 
-<p class="lead mt-5">A sample site using the Docsy Hugo theme.
+<p class="lead mt-5">Add About info (1-2 sentences) on the developers and their intention. 
 </p>
 
 {{< /blocks/cover >}}
 
 {{% blocks/lead %}}
-Goldydocs is a sample site using the <a href="https://github.com/google/docsy">Docsy</a> Hugo theme that shows what it can do and provides you with a template site structure. It’s designed for you to clone and edit as much as you like. See the different sections of the documentation and site for more ideas.
+Possibly add more detailed info on the projects goals in terms of community/improving workflow. 
 {{% /blocks/lead %}}
 
 
 {{< blocks/section >}}
 <div class="col-12">
-<h1 class="text-center">This is another section</h1>
+<h1 class="text-center">We could add pics here of key contributors.</h1>
 </div>
 
 {{< /blocks/section >}}
-
 
 
 {{< blocks/section >}}

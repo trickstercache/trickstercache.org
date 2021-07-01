@@ -1,6 +1,7 @@
 ---
 title: "Configuring Trickster"
 linkTitle: " Configuring"
+weight: 2
 description: >
   Learn how to configure Trickster for your project.
 ---

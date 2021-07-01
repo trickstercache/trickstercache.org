@@ -1,6 +1,7 @@
 ---
 title: "Where to Place Trickster"
 linkTitle: "Trickster Placement"
+weight: 3
 description: >
   Choose the best Trickster placement for your project.
 ---

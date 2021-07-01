@@ -1,13 +1,13 @@
 ---
 title: "Getting Started"
 linkTitle: "Getting Started"
-weight: 2
+weight: 3
 description: >
   What does your user need to know to try your project?
 ---
-<!-- Got this docker compose link from https://github.com/trickstercache/trickster/tree/main/examples/docker-compose  -->
+<!-- Got this docker compose demo from https://github.com/trickstercache/trickster/tree/main/examples/docker-compose  -->
 
-{{< alert title="Try Trickster" >}}To try a demo of Trickster with Docker before installing, see our end-to-end [Docker Compose demo composition](./docker-compose) for a zero-configuration running environment.{{< /alert >}}
+{{< alert title="Try Trickster" >}}To try a demo of Trickster with Docker before installing, see our end-to-end [Quickstart](/docs/quickstart/) for a zero-configuration running environment.{{< /alert >}}
 
 ## Installing with Docker
 
@@ -17,13 +17,11 @@ Docker images are available on Docker Hub. To install Trickster with Docker, run
 $ docker run --name trickster -d -v /path/to/trickster.conf:/etc/trickster/trickster.conf -p 0.0.0.0:8480:8480 tricksterproxy/trickster
 ```
 
-See the [Deployment](./deployment.md) documentation for more information about using or creating Trickster Docker images.
+See the [Deployment](/docs/quick-start/deployment/) documentation for more information about using or creating Trickster Docker images.
 
 ## Installing with Kubernetes
 
-Link to [Deployment](https://github.com/trickstercache/trickster/tree/main/deploy).
-
-See the 'deploy' Directory for Kube and deployment files and examples.
+To install Trickster with Kubernetes, see [Deployment](/docs/quick-start/deployment/).
 
 ## Helm
 

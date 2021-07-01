@@ -1,6 +1,6 @@
 ---
-title: "Try Trickster with Docker Compose"
-linkTitle: "Try Trickster"
+title: "Quickstart"
+linkTitle: "Quickstart"
 weight: 1
 description: >
   Try Trickster with Docker Compose and minimal setup.
