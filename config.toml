@@ -67,7 +67,7 @@ id = "UA-00000000-0"
 section = ["HTML", "print"]
 
 [params]
-copyright = "The Trickster Authors"
+copyright = "Trickster Authors"
 privacy_policy = "https://policies.google.com/privacy"
 
 # First one is picked as the Twitter card image if not set on page.

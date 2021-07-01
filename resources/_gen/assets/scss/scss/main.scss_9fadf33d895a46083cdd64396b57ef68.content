@@ -15198,4 +15198,7 @@ footer a {
 .pageinfo-primary {
   border-color: #4080bf; }
 
+footer {
+  min-height: 200px; }
+
 /*# sourceMappingURL=main.css.map */
