@@ -15204,4 +15204,12 @@ footer {
 .td-box--2 {
   background-color: #333; }
 
+.td-404 main {
+  max-width: 1000px;
+  margin: auto; }
+  .td-404 main #title {
+    padding-top: 2rem; }
+  .td-404 main ul {
+    padding-bottom: 2rem; }
+
 /*# sourceMappingURL=main.css.map */

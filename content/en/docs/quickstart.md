@@ -24,19 +24,31 @@ You should already have the following installed:
 ## Starting the demo
 
 1. Clone the [Trickster Github project](https://github.com/trickstercache/trickster). 
-1. At the command line, change your working directory to `.trickster-main/deploy/trickster-demo` with the following command:
+1. In the `trickster` directory, change your working directory to `./examples/docker-compose` with the following command:
+
     ```
-    cd trickster-main/deploy/trickster-demo
+    cd examples/docker-compose
     ```
-1. To run the demo from the demo directory, run `docker-compose up -d`.
+    
+1. To run the demo from the demo directory, enter the following command:
 
-You can then interact with each of the services on their exposed ports (as defined in [Compose file](https://github.com/trickstercache/trickster/blob/main/examples/docker-compose/docker-compose.yml)), or by running `docker logs $container_name`, `docker attach $container_name`, etc.
+    ```
+    docker-compose up -d
+    ```
 
-Once the composition is running, a great place to start exploring is Grafana, which will be running at <http://127.0.0.1:3000/> if the composition came up without issue. Grafana is pre-configured with datasources and sample dashboard that are ready-to-use for the demo.
+1. You can interact with each of the services on their exposed ports (as defined in [Compose file](https://github.com/trickstercache/trickster/blob/main/examples/docker-compose/docker-compose.yml)), or by running `docker logs $container_name`, `docker attach $container_name`, etc.
 
-Also, take a look at Jaeger UI, available at <http://127.0.0.1:16686>, which provides visualization of traces shipped by Trickster and Grafana. The more you use trickster-based data sources in Grafana, the more traces you will see in Jaeger. This composition runs the Jaeger All-in-One container, and Trickster ships some traces to the Agent, and others directly to the Collector, so as to demonstrate both capabilities. The Trickster config determines which upstream origin ships which traces to where.
+## Exploring Trickster
 
-Speaking of, definitely review the various files in the `docker-compose-data` folder, which is full of configurations and other bootstrap data. This might be useful for configuring and using Trickster (or any of these other fantastic projects) in your own deployments. It might be fun to add, remove or change some of the trickster configurations in [./docker-compose-data/trickster-config/trickster.yaml](https://github.com/trickstercache/trickster/blob/main/examples/docker-compose/docker-compose-data/trickster-config/trickster.yaml) and then `docker exec docker-compose_trickster_1 kill -1 1` into the Trickster container to apply the changes, or restart the environment altogether with `docker-compose restart`. Just be sure to make a backup of the original config first, so you don't have to download it again later.
+### Grafana
+
+Once the composition is running, we recommend exploring with Grafana, at <http://127.0.0.1:3000/>. Grafana is pre-configured with datasources and a sample dashboard that are ready-to-use for the demo.
+
+### Jaeger UI
+
+Jaeger UI is available at <http://127.0.0.1:16686>, which provides visualization of traces shipped by Trickster and Grafana. The more you use trickster-based data sources in Grafana, the more traces you will see in Jaeger. This composition runs the Jaeger All-in-One container.  Trickster ships some traces to the Agent and others directly to the Collector, so as to demonstrate both capabilities. The Trickster config determines which upstream origin ships which traces where.
+
+Speaking of, definitely review the various files in the `docker-compose-data` folder, which is full of configurations and other bootstrap data. This might be useful for configuring and using Trickster (or any of these other fantastic projects) in your own deployments. Try adding, removing, or changing some of the trickster configurations in [./docker-compose-data/trickster-config/trickster.yaml](https://github.com/trickstercache/trickster/blob/main/examples/docker-compose/docker-compose-data/trickster-config/trickster.yaml) and then `docker exec docker-compose_trickster_1 kill -1 1` into the Trickster container to apply the changes, or restart the environment altogether with `docker-compose restart`. Just be sure to make a backup of the original config first, so you don't have to download it again later.
 
 ## Example Datasources
 
@@ -44,7 +56,7 @@ The `sim-*` datasources generate on-the-fly simulation data for any possible tim
 
 The non-sim Prometheus container that backs the `prom-*` datasources polls the newly-running environment to generate metrics that will then populate the dashboard. Since the Prometheus container only collects and stores metrics while the environment is running, you'll need to wait a minute or two for those datasources to show any data on the dashoard in real-time.
 
-## Getting Real Dashboad Data
+## Getting Real Dashboard Data
 
 Using datasources backed by the real Prometheus and Trickster (the `prom-trickster-*` datasources), rather than the simulator, to explore the dashboard is more desirable for the demo. It better conveys the shape and nature of the Trickster-specific metrics that might be unfamiliar. However, since there is no historical data in the demo composition, that creates an upfront barrier.
 

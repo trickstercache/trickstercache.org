@@ -104,3 +104,16 @@ footer {
 .td-box--2 {
     background-color: $gray-800;
 }
+
+// 404 page styles
+
+.td-404 main {
+    max-width: 1000px;
+    margin: auto;
+    #title {
+       padding-top: 2rem;
+    }
+    ul {
+        padding-bottom: 2rem;
+    }
+}
