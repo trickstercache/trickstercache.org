@@ -1,99 +1,62 @@
-# Docsy Example
+# Trickster documentation
 
-[Docsy](https://github.com/google/docsy) is a Hugo theme for technical documentation sites, providing easy site navigation, structure, and more. This **Docsy Example Project** uses the Docsy theme, as well as providing a skeleton documentation structure for you to use. You can either copy this project and edit it with your own content, or use the theme in your projects like any other [Hugo theme](https://gohugo.io/themes/installing-and-using-themes/).
+This repository contains the [documentation site](https://trickstercache.org/) for Trickster.
 
-The theme is included in this project as a Git submodule:
+## Making a contribution
 
-```bash
-▶ git submodule
- a053131a4ebf6a59e4e8834a42368e248d98c01d themes/docsy (heads/master)
-```
+To make a contribution to the documentation, [file an issue](https://github.com/trickstercache/trickstercache.org/issues/new/choose) or fork the project and submit a [Pull Request](https://github.com/trickstercache/trickstercache.org/pulls). For specific instructions see (About Forks)[https://docs.github.com/en/github/collaborating-with-pull-requests/working-with-forks/about-forks] and [Creating a Pull Request](https://docs.github.com/en/github/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request) in the GitHub documentation.
 
-This Docsy Example Project is hosted at [https://example.docsy.dev/](https://example.docsy.dev/).
+## Finding files to edit
 
-You can find detailed theme instructions in the Docsy user guide: https://docsy.dev/docs/
+The Trickster documentation site uses Hugo with the Docsy theme. The following instructions specify where to find frequently edited files. 
 
-This is not an officially supported Google product. This project is currently maintained.
+For more detailed information on the site infrastructure, see the [Hugo](https://gohugo.io/documentation/) and [Docsy](https://www.docsy.dev/docs/) documentation.
 
-## Using the Docsy Example Project as a template
+### Editing styles
 
-A simple way to get started is to use this project as a template, which gives you a site project that is set up and ready to use. To do this: 
+To override styles, edit the SCSS files in the [assets/scss](https://github.com/trickstercache/trickstercache.org/tree/main/assets/scss) directory. Use these two files as follows:
 
-1. Click **Use this template**.
+- `_styles_project.scss`: edit this file to override Docsy styles or change the current styles.
+- `_variables_project.scss`: declare SCSS variables in this file that you can use elsewhere.
 
-2. Select a name for your new project and click **Create repository from template**.
+### Editing documentation content
 
-3. Make your own local working copy of your new repo using git clone, replacing https://github.com/my/example.git with your repo’s web URL:
+To edit Trickster documentation content, edit the markdown files in [content/en/docs](https://github.com/trickstercache/trickstercache.org/tree/main/content/en/docs). For guidance on how to write in markdown, see GitHub Guides [Mastering Markdown](https://guides.github.com/features/mastering-markdown/).
 
-```bash
-git clone --recurse-submodules --depth 1 https://github.com/my/example.git
-```
+### Editing other parts of the site
 
-You can now edit your own versions of the site’s source files.
+To edit other areas of the Trickster website, see the following directories:
 
-If you want to do SCSS edits and want to publish these, you need to install `PostCSS`
+About: [https://github.com/trickstercache/trickstercache.org/tree/main/content/en/about](https://github.com/trickstercache/trickstercache.org/tree/main/content/en/about)
+Blog: [https://github.com/trickstercache/trickstercache.org/tree/main/content/en/blog](https://github.com/trickstercache/trickstercache.org/tree/main/content/en/blog)
+Community: [https://github.com/trickstercache/trickstercache.org/tree/main/content/en/community](https://github.com/trickstercache/trickstercache.org/tree/main/content/en/community)
 
-```bash
-npm install
-```
 
-## Running the website locally
+## Using the documentation site locally 
 
-Building and running the site locally requires a recent `extended` version of [Hugo](https://gohugo.io).
-You can find out more about how to install Hugo for your environment in our
-[Getting started](https://www.docsy.dev/docs/getting-started/#prerequisites-and-installation) guide.
+### Prerequisite
 
-Once you've made your working copy of the site repo, from the repo root folder, run:
+To build and run the site locally, you must have a recent `extended` version of [Hugo](https://gohugo.io).
+For more information on configuring your environment, see the Docsy
+[Getting started](https://www.docsy.dev/docs/getting-started/#prerequisites-and-installation) guide. If you don't want to run the site locally, you can check the preview when you submit your PR.
 
-```
-hugo server
-```
+### Running the website locally
 
-## Running a container locally
+1. At the command line, within the Trickster documentation root directory, run the following command:
 
-You can run docsy-example inside a [Docker](https://docs.docker.com/)
-container, the container runs with a volume bound to the `docsy-example`
-folder. This approach doesn't require you to install any dependencies other
-than [Docker Desktop](https://www.docker.com/products/docker-desktop) on
-Windows and Mac, and [Docker Compose](https://docs.docker.com/compose/install/)
-on Linux.
-
-1. Build the docker image 
-
-   ```bash
-   docker-compose build
+   ```
+   hugo serve
    ```
 
-1. Run the built image
-
-   ```bash
-   docker-compose up
-   ```
-
-   > NOTE: You can run both commands at once with `docker-compose up --build`.
-
-1. Verify that the service is working. 
-
-   Open your web browser and type `http://localhost:1313` in your navigation bar,
+1. Open your web browser and type `http://localhost:1313` in your navigation bar,
    This opens a local instance of the docsy-example homepage. You can now make
    changes to the docsy example and those changes will immediately show up in your
    browser after you save.
 
-### Cleanup
 
-To stop Docker Compose, on your terminal window, press **Ctrl + C**. 
+#### Troubleshooting
 
-To remove the produced images run:
-
-```console
-docker-compose rm
-```
-For more information see the [Docker Compose
-documentation](https://docs.docker.com/compose/gettingstarted/).
-
-## Troubleshooting
-
-As you run the website locally, you may run into the following error:
+In you experience the following error, you need the extended version of Hugo:
 
 ```
 ➜ hugo server
@@ -104,9 +67,9 @@ Built in 288 ms
 Error: Error building site: TOCSS: failed to transform "scss/main.scss" (text/x-scss): resource "scss/scss/main.scss_9fadf33d895a46083cdd64396b57ef68" not found in file cache
 ```
 
-This error occurs if you have not installed the extended version of Hugo.
-See our [user guide](https://www.docsy.dev/docs/getting-started/) for instructions on how to install Hugo.
+See the Docsy [user guide](https://www.docsy.dev/docs/getting-started/) for details on how to install Hugo.
 
-# License
- Trickster is licensed under an [Apache 2.0 license](./LICENSE).
- The Trickster documentation is licensed under a [CC-BY-4.0 license](./LICENSE-docs). 
+## License
+
+© Trickster Authors 2021 | Documentation Distributed under CC-BY-4.0
+© 2021 The Linux Foundation. All rights reserved. The Linux Foundation has registered trademarks and uses trademarks. For a list of trademarks of The Linux Foundation, please see our [Trademark Usage page](https://www.linuxfoundation.org/trademark-usage).
