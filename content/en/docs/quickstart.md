@@ -6,8 +6,6 @@ description: >
   Try Trickster with Docker Compose and minimal setup.
 ---
 
-<!-- from https://github.com/trickstercache/trickster/blob/main/examples/docker-compose/README.md -->
-
 This composition creates service containers for Prometheus, Grafana, Jaeger, Zipkin, Redis, Trickster and Mockster that together demonstrate several basic end-to-end configurations for running Trickster in your environment with different cache and tracing provider options. 
 
 {{< alert >}}
@@ -48,7 +46,7 @@ Once the composition is running, we recommend exploring with Grafana, at <http:/
 
 Jaeger UI is available at <http://127.0.0.1:16686>, which provides visualization of traces shipped by Trickster and Grafana. The more you use trickster-based data sources in Grafana, the more traces you will see in Jaeger. This composition runs the Jaeger All-in-One container.  Trickster ships some traces to the Agent and others directly to the Collector, so as to demonstrate both capabilities. The Trickster config determines which upstream origin ships which traces where.
 
-Speaking of, definitely review the various files in the `docker-compose-data` folder, which is full of configurations and other bootstrap data. This might be useful for configuring and using Trickster (or any of these other fantastic projects) in your own deployments. Try adding, removing, or changing some of the trickster configurations in [./docker-compose-data/trickster-config/trickster.yaml](https://github.com/trickstercache/trickster/blob/main/examples/docker-compose/docker-compose-data/trickster-config/trickster.yaml) and then `docker exec docker-compose_trickster_1 kill -1 1` into the Trickster container to apply the changes, or restart the environment altogether with `docker-compose restart`. Just be sure to make a backup of the original config first, so you don't have to download it again later.
+For a variety of configurations and other bootstrap data, review the various files in the `docker-compose-data` folder. This might be useful for configuring and using Trickster (or any of these other fantastic projects) in your own deployments. Try adding, removing, or changing some of the trickster configurations in [./docker-compose-data/trickster-config/trickster.yaml](https://github.com/trickstercache/trickster/blob/main/examples/docker-compose/docker-compose-data/trickster-config/trickster.yaml) and then `docker exec docker-compose_trickster_1 kill -1 1` into the Trickster container to apply the changes, or restart the environment altogether with `docker-compose restart`. Just be sure to make a backup of the original config first, so you don't have to download it again later.
 
 ## Example Datasources
 
@@ -66,4 +64,4 @@ In addition to generating metrics, using the `trickster`-labeled datasources gen
 
 ## Stopping the Demo and Cleaning Up
 
-To stop and remove the demo, run `docker-compose down` from this directory.
+To stop and remove the demo, run `docker-compose down` in the `./examples/docker-compose` directory.
