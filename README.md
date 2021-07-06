@@ -27,9 +27,9 @@ To edit Trickster documentation content, edit the markdown files in [content/en/
 
 To edit other areas of the Trickster website, see the following directories:
 
-- About: [https://github.com/trickstercache/trickstercache.org/tree/main/content/en/about](https://github.com/trickstercache/trickstercache.org/tree/main/content/en/about)
-- Blog: [https://github.com/trickstercache/trickstercache.org/tree/main/content/en/blog](https://github.com/trickstercache/trickstercache.org/tree/main/content/en/blog)
-- Community: [https://github.com/trickstercache/trickstercache.org/tree/main/content/en/community](https://github.com/trickstercache/trickstercache.org/tree/main/content/en/community)
+- About: [content/en/about](https://github.com/trickstercache/trickstercache.org/tree/main/content/en/about)
+- Blog: [content/en/blog](https://github.com/trickstercache/trickstercache.org/tree/main/content/en/blog)
+- Community: [content/en/community](https://github.com/trickstercache/trickstercache.org/tree/main/content/en/community)
 
 
 ## Using the documentation site locally 
