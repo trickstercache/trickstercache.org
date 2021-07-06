@@ -27,9 +27,9 @@ To edit Trickster documentation content, edit the markdown files in [content/en/
 
 To edit other areas of the Trickster website, see the following directories:
 
-About: [https://github.com/trickstercache/trickstercache.org/tree/main/content/en/about](https://github.com/trickstercache/trickstercache.org/tree/main/content/en/about)
-Blog: [https://github.com/trickstercache/trickstercache.org/tree/main/content/en/blog](https://github.com/trickstercache/trickstercache.org/tree/main/content/en/blog)
-Community: [https://github.com/trickstercache/trickstercache.org/tree/main/content/en/community](https://github.com/trickstercache/trickstercache.org/tree/main/content/en/community)
+- About: [https://github.com/trickstercache/trickstercache.org/tree/main/content/en/about](https://github.com/trickstercache/trickstercache.org/tree/main/content/en/about)
+- Blog: [https://github.com/trickstercache/trickstercache.org/tree/main/content/en/blog](https://github.com/trickstercache/trickstercache.org/tree/main/content/en/blog)
+- Community: [https://github.com/trickstercache/trickstercache.org/tree/main/content/en/community](https://github.com/trickstercache/trickstercache.org/tree/main/content/en/community)
 
 
 ## Using the documentation site locally 
@@ -72,4 +72,5 @@ See the Docsy [user guide](https://www.docsy.dev/docs/getting-started/) for deta
 ## License
 
 © Trickster Authors 2021 | Documentation Distributed under CC-BY-4.0
+
 © 2021 The Linux Foundation. All rights reserved. The Linux Foundation has registered trademarks and uses trademarks. For a list of trademarks of The Linux Foundation, please see our [Trademark Usage page](https://www.linuxfoundation.org/trademark-usage).
