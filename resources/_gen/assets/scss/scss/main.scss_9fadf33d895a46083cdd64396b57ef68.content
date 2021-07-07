@@ -15210,10 +15210,11 @@ body:lang(fa) {
 a {
   color: #369; }
 
-footer a {
-  color: #b3cce6; }
-  footer a:hover {
-    color: #faad0a; }
+.main a {
+  color: #1a334d; }
+
+.text-muted {
+  color: #575757 !important; }
 
 .alert-primary {
   border-color: #369; }
@@ -15233,6 +15234,10 @@ footer a {
 
 footer {
   min-height: fit-content; }
+  footer a {
+    color: #c6d9ec; }
+    footer a:hover {
+      color: #faad0a; }
 
 .copyright-info {
   max-width: 80%;
@@ -15241,6 +15246,12 @@ footer {
 
 .td-box--2 {
   background-color: #333; }
+
+.td-box--1 .container p {
+  line-height: 2rem; }
+
+.td-box--4 p > a {
+  color: #369; }
 
 .td-404 main {
   max-width: 1000px;

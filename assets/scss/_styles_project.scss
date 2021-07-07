@@ -1,7 +1,7 @@
 // Trickster overrides
 
 // override !important from theme to apply uppercase to name
-.navbar-brand>.text-uppercase {
+.navbar-brand > .text-uppercase {
     text-transform: capitalize !important;
     position: relative;
     top: 2px;
@@ -43,6 +43,7 @@
 .td-cover-block--height-full {
     min-height:200px;
 }
+
 .td-main #td-cover-block-0 {
     background: rgb(51,102,153);
 }
@@ -75,7 +76,6 @@
         min-width: 150px;
         padding: 1rem 2rem;
     }
-  
 }
 
 .td-box--3 {
@@ -113,13 +113,13 @@ a {
     color: $trickster-blue;
 }
 
-footer {
-    a {
-        color: lighten($trickster-light-blue, 30%);
-        &:hover {
-            color: lighten($secondary, 30%);
-        }
-    }
+.main a {
+    color: $trickster-dark-blue;
+}
+
+// override default to reach an accessible contrast ratio
+.text-muted {
+    color: #575757 !important;
 }
 
 .alert-primary {
@@ -134,7 +134,6 @@ footer {
 }
 
 // remove extraneaous horizontal rule that causes a double line on some pages above feedback section
-
 .panel-line {
     display: none;
 }
@@ -147,6 +146,12 @@ footer {
 
 footer {
     min-height: fit-content;
+    a {
+        color: lighten($trickster-light-blue, 35%);
+        &:hover {
+            color: lighten($secondary, 30%);
+        }
+    }
 }
 
 .copyright-info {
@@ -157,6 +162,14 @@ footer {
 
 .td-box--2 {
     background-color: $gray-800;
+}
+
+.td-box--1 .container p {
+    line-height: 2rem;
+}
+
+.td-box--4 p > a {
+    color: $trickster-blue;
 }
 
 // 404 page styles
