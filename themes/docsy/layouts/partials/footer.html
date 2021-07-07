@@ -17,7 +17,7 @@
         {{ end }}
       </div>
       <div class="col-12 col-sm-4 text-center py-2 order-sm-2">
-
+<!-- 
         {{ with .Site.Params.copyright }}
           <small class="text-white">&copy; {{ .}} {{ now.Year}} 
             {{ T "footer_all_rights_reserved" }}
@@ -26,11 +26,26 @@
           <small class="text-white">&copy; {{ now.Year}} 
             The Linux Foundation. All rights reserved. The Linux Foundation has registered trademarks and uses trademarks. For a list of trademarks of The Linux Foundation, please see our <a href ="https://www.linuxfoundation.org/trademark-usage">Trademark Usage</a> page.
           </small></p>
-        {{ end }}
+        {{ end }} -->
         
       </div>
     </div>
   </div>
+
+  <div class="copyright-info">
+
+    {{ with .Site.Params.copyright }}
+    <small class="text-white">&copy; {{ .}} {{ now.Year}} 
+      {{ T "footer_all_rights_reserved" }}
+    </small>
+    <p>
+      <small class="text-white">&copy; {{ now.Year}} 
+    The Linux Foundation. All rights reserved. The Linux Foundation has registered trademarks and uses trademarks. For a list of trademarks of The Linux Foundation, please see our <a href ="https://www.linuxfoundation.org/trademark-usage">Trademark Usage</a> page.
+      </small></p>
+    {{ end }}
+
+  </div>
+
 </footer>
 {{ define "footer-links-block" }}
 <ul class="list-inline mb-0">
