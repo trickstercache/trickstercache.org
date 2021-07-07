@@ -39,7 +39,7 @@ The `methods` section of a Path Config takes a string array of HTTP Methods that
 
 ## Request Rewriters
 
-You can configure paths send inbound requests through a request rewriter that can modify any aspect of the inbound request (method, url, headers, etc.), before being processed by the path route. This means, when the path route inspects the request, it will have already been modified by the rewriter. Provide a rewriter with the `req_rewriter_name` config. It must map to a named/configured request rewriter (see [request rewriters](./request_rewriters.md) for more info). Note, you can also send requests through a rewriter at the backend level. If both are configured, backend-level rewriters are executed before path rewriters are.
+You can configure paths send inbound requests through a request rewriter that can modify any aspect of the inbound request (method, url, headers, etc.), before being processed by the path route. This means, when the path route inspects the request, it will have already been modified by the rewriter. Provide a rewriter with the `req_rewriter_name` config. It must map to a named/configured request rewriter (see [request rewriters](/docs/paths/request-rewriters/) for more info). Note, you can also send requests through a rewriter at the backend level. If both are configured, backend-level rewriters are executed before path rewriters are.
 
 ```yaml
 request_rewriters:

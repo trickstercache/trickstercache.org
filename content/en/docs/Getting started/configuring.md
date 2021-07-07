@@ -43,7 +43,7 @@ Finally, Trickster will check for and evaluate the following Command Line Argume
 * `-log-level INFO` - Level of Logging that Trickster will output
 * `-config /path/to/trickster.yaml` - See [Configuration File](#configuration-file) section above
 * `-origin-url http://prometheus.example.com:9090` - The default origin URL for proxying all http requests
-* `-provider prometheus` - The type of [supported backend server](./supported-origin-types.md)
+* `-provider prometheus` - The type of [supported backend server](/docs/origins/supported-providers/)
 * `-proxy-port 8480` - Listener port for the HTTP Proxy Endpoint
 * `-metrics-port 8481` - Listener port for the Metrics and pprof debugging HTTP Endpoint
 

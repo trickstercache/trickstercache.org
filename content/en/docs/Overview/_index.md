@@ -24,14 +24,14 @@ By working between endpoints, databases, users and the dashboard server,  Tricks
 
 Trickster is a fully-featured HTTP reverse proxy cache for HTTP applications such as static file servers and web APIs. Trickster's proxy features include the following:
 
-* [Supports Transport Layer Security (TLS) Protocol](./tls.md) and HTTP/2 for frontend termination and backend origination
-* Offers several options for a [caching layer](./caches.md), including in-memory, filesystem, Redis and bbolt
-* [Highly customizable](./configuring.md), using minimal configuration settings, [down to the HTTP Path](./paths.md)
-* Built-in Prometheus [metrics](./metrics.md) and customizable [Health Check](./health.md) Endpoints for end-to-end monitoring
-* [Negative Caching](./negative-caching.md) to prevent domino effect outages
-* High-performance [Collapsed Forwarding](./collapsed-forwarding.md)
-* Best-in-class [Byte Range Request caching and acceleration](./range_request.md).
-* [Distributed Tracing](./tracing.md) via OpenTelemetry, supporting Jaeger and Zipkin
+* [Supports Transport Layer Security (TLS) Protocol](/docs/origins/tls/) and HTTP/2 for frontend termination and backend origination
+* Offers several options for a [caching layer](/docs/caching/), including in-memory, filesystem, Redis and bbolt
+* [Highly customizable](/docs/getting-started/configuring/), using minimal configuration settings, [down to the HTTP Path](/docs/paths/paths/)
+* Built-in Prometheus [metrics](/docs/tracing-and-metrics/metrics/) and customizable [Health Check](/docs/load-balancers/health/) Endpoints for end-to-end monitoring
+* [Negative Caching](/docs/caching/negative-caching/) to prevent domino effect outages
+* High-performance [Collapsed Forwarding](/docs/caching/collapsed-forwarding/)
+* Best-in-class [Byte Range Request caching and acceleration](/docs/caching/range-request/).
+* [Distributed Tracing](/docs/tracing-and-metrics/tracing/) via OpenTelemetry, supporting Jaeger and Zipkin
 * Rules engine for custom request routing and rewriting
 
 ## Time Series Database Accelerator
@@ -50,7 +50,7 @@ Trickster works with virtually any Dashboard application that makes queries to a
 
 <img src="irondb_logo_60.png" width=16 alt="Circonus IRONdb logo" /> Circonus IRONdb
 
-See the [Supported Origin Types](./supported-origin-types.md) documentation for details.
+See the [Supported Providers](/docs/origins/supported-providers/) documentation for details.
 
 ### How Trickster Accelerates Time Series
 
