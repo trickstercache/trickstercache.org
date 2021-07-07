@@ -15,7 +15,7 @@ Customizable HTTP reverse proxy caching leverages features such as metrics, heal
 By working between endpoints, databases, users and the dashboard server,  Trickster can dramatically reduce time series database queries by checking for cached data and only asking for data that is outstanding. 
 
 
-<img src="high-level-1.png" width=512 alt="diagram of Trickster logo with arrows from icons representing the client and a dashboard server and arrows from the Trickster logo to icons for HTTP Endpoints and Time Series Databases" />
+<img src="high-level-1.png" width=512 alt="Diagram of Trickster logo with arrows from icons representing the client and a dashboard server and arrows from the Trickster logo to icons for HTTP Endpoints and Time Series Databases" />
 
 <figcaption>Diagram of Trickster working between the client, dashboard server, HTTP endpoints, and databases to reduce data requests.
 </figcaption>
@@ -58,24 +58,24 @@ See the [Supported Origin Types](./supported-origin-types.md) documentation for 
 
 Most dashboards request from a time series database the entire time range of data they wish to present every time a user's dashboard loads, as well as on every auto-refresh. Trickster's Delta Proxy inspects the time range of a client query to determine what data points are already cached, and requests from the tsdb only the data points still needed to service the client request. This results in dramatically faster chart load times, since the tsdb is queried only for tiny incremental changes on each dashboard load, rather than several hundred data points of duplicative data.
 
-<img src="partial-cache-hit.png" width=1024 />
+<img src="partial-cache-hit.png" alt="Diagram of how Trickster determines cache range" width=1024 />
 
 #### 2. Step Boundary Normalization
 
-When Trickster requests data from a tsdb, it adjusts the clients's requested time range slightly to ensure that all data points returned are aligned to normalized step boundaries. For example, if the step is 300s, all data points will fall on the clock 0's and 5's. This ensures that the data is highly cacheable, is conveyed visually to users in a more familiar way, and that all dashboard users see identical data on their screens.
+When Trickster requests data from a tsdb, it adjusts the client's requested time range slightly to ensure that all data points returned are aligned to normalized step boundaries. For example, if the step is 300s, all data points will fall on the clock 0's and 5's. This ensures that the data is highly cacheable, is conveyed visually to users in a more familiar way, and that all dashboard users see identical data on their screens.
 
-<img src="step-boundary-normalization.png" width=640 />
+<img src="step-boundary-normalization.png" alt="Diagram of Trickster adjusting the client's requested time range." width=640 />
 
 #### 3. Fast Forward
 
 Trickster's Fast Forward feature ensures that even with step boundary normalization, real-time graphs still always show the most recent data, regardless of how far away the next step boundary is. For example, if your chart step is 300s, and the time is currently 1:21p, you would normally be waiting another four minutes for a new data point at 1:25p. Trickster will break the step interval for the most recent data point and always include it in the response to clients requesting real-time data.
 
-<img src="fast-forward.png" width=640 />
+<img src="fast-forward.png" alt="Diagram of Trickster breaking the step interval for the most recent data point and including it in the response to clients requesting real-time data." width=640 />
 
 
 ## Next steps
 
 Ready to try it out?
 
-* [Getting Started](/docs/getting-started/): Get started with Trickster
+* [Quickstart](/docs/quickstart/): Try Trickster with Docker Compose
 

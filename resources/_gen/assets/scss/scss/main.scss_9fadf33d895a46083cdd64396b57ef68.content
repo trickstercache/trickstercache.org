@@ -15223,6 +15223,14 @@ footer a {
 .pageinfo-primary {
   border-color: #4080bf; }
 
+.panel-line {
+  display: none; }
+
+.feedback--title {
+  border-top: 1px solid #ddd;
+  padding-top: 1rem;
+  margin-top: 1rem; }
+
 footer {
   min-height: fit-content; }
 

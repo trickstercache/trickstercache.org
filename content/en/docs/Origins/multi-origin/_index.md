@@ -92,7 +92,7 @@ Example Client Request URLs:
 
 * Configuring Grafana to request from backend `foo` via Trickster:
 
-<img src="grafana-path-origin.png" alt="Diagram of config tab for adding a data source." width=610 />
+<img src="grafana-path-origin.png" width=610 />
 
 ### DNS Alias Configuration
 
