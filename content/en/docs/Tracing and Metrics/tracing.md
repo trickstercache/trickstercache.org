@@ -10,7 +10,7 @@ description: >
 
 Trickster instruments Distributed Tracing with [OpenTelemetry](http://opentelemetry.io/), which is a currently emergent, comprehensive observability stack that is in Public Beta. We import the [OpenTelemetry golang packages](https://github.com/open-telemetry/opentelemetry-go) to instrument support for tracing.
 
-As OpenTelemetry evolves to support additional exporter formats, we will work to extend Trickster to support those as quickly as possible. We also make a best effort to update our otel package imports to the latest releases, whenever we publish a new Trickster release. You can check the [go.mod](../go.mod) file to see which release of opentelemetry-go we are is using. In this view, to see which version of otel a specific Trickster release imports, use the branch selector dropdown to switch to the tag corresponding to that version of Trickster.
+As OpenTelemetry evolves to support additional exporter formats, we will work to extend Trickster to support those as quickly as possible. We also make a best effort to update our otel package imports to the latest releases, whenever we publish a new Trickster release. You can check the [go.mod](https://github.com/trickstercache/trickster/blob/main/go.mod) file to see which release of opentelemetry-go we are is using. In this view, to see which version of otel a specific Trickster release imports, use the branch selector dropdown to switch to the tag corresponding to that version of Trickster.
 
 ## Supported Tracing Backends
 
@@ -23,7 +23,7 @@ As OpenTelemetry evolves to support additional exporter formats, we will work to
 
 Trickster allows the operator to configure multiple tracing configurations, which can be associated into each Backend configuration by name.
 
-The [example config](https://github.com/trickstercache/trickster/blob/v1.1.2/examples/conf/example.full.yaml#L508) has exhaustive examples of configuring Trickster for distributed tracing.
+The [example config](https://github.com/trickstercache/trickster/blob/main/examples/conf/example.full.yaml) has exhaustive examples of configuring Trickster for distributed tracing.
 
 ## Span List
 
@@ -43,7 +43,7 @@ Trickster can insert several spans to the traces that it captures, depending upo
 
 ## Tags / Attributes
 
-Trickster supports adding custom tags to every span via the configuration. Depending upon your preferred tracing backend, these may be referred to as attributes. See the [example config](https://github.com/trickstercache/trickster/blob/v1.1.2/examples/conf/example.full.yaml#L548) for examples of adding custom attributes.
+Trickster supports adding custom tags to every span via the configuration. Depending upon your preferred tracing backend, these may be referred to as attributes. See the [example config](https://github.com/trickstercache/trickster/blob/main/examples/conf/example.full.yaml) for examples of adding custom attributes.
 
 Trickster also supports omitting any tags that Trickster inserts by default. The list of default tags are below. For example on the "request" span, an `http.url` tag is attached with the current full URL. In deployments where that tag may introduce too much cardinality in your backend trace storage system, you may wish to omit that tag and rely on the more concise `path` tag. Each tracer config can be provided a string list of tags to omit from traces.
 
@@ -58,7 +58,7 @@ Trickster also supports omitting any tags that Trickster inserts by default. The
 
 ### Attributes added to QueryCache span
 
-- `cache.status` - the lookup status of cache query. See the [cache status reference](./caches.md#cache-status) for a description of the attribute values.
+- `cache.status` - the lookup status of cache query. See the [cache status reference](/docs/caching/caches/#cache-status) for a description of the attribute values.
 
 ### Attributes added to the FetchRevalidation span
 
@@ -66,4 +66,4 @@ Trickster also supports omitting any tags that Trickster inserts by default. The
 
 ### Attributes added to the FetchObject span
 
-- `isPCF` - is true if the origin is configured for [Progressive Collapsed Forwarding](./collapsed-forwarding.md#progressive-collapsed-forwarding)
+- `isPCF` - is true if the origin is configured for [Progressive Collapsed Forwarding](/docs/caching/collapsed-forwarding/)

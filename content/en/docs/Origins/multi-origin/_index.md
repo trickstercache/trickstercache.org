@@ -16,7 +16,7 @@ There are 2 ways to route to multiple backends.
 
 ## Basic Usage
 
-To utilize multiple backends, you must craft a Trickster configuration file to be read when Trickster starts up - operating with environment variables or command line arguments only supports accelerating a single backend. The [example.full.yaml](../examples/conf/example.full.yaml) provides good documentation and commented sections demonstrating multiple backends. The config file should be placed in `/etc/trickster/trickster.yaml` unless you specify a different path when starting Trickster with the `-config` command line argument.
+To utilize multiple backends, you must craft a Trickster configuration file to be read when Trickster starts up - operating with environment variables or command line arguments only supports accelerating a single backend. The [example.full.yaml](https://github.com/trickstercache/trickster/blob/main/examples/conf/example.full.yaml) provides good documentation and commented sections demonstrating multiple backends. The config file should be placed in `/etc/trickster/trickster.yaml` unless you specify a different path when starting Trickster with the `-config` command line argument.
 
 Each backend that your Trickster instance supports must be explicitly enumerated in the configuration file. Trickster does not support open proxying.
 

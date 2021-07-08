@@ -25,13 +25,13 @@ Trickster fully supports the [Prometheus HTTP API (v1)](https://prometheus.io/do
 
 Trickster supports for InfluxDB. Specify `'influxdb'` as the Provider when configuring Trickster.
 
-See the [InfluxDB Support Document](./influxdb.md) for more information.
+See the [InfluxDB Support Document](/docs/queries/influxdb/) for more information.
 
 ### <img src="clickhouse_logo.png" alt="ClickHouse logo" width=16 /> ClickHouse
 
 Trickster supports accelerating ClickHouse time series. Specify `'clickhouse'` as the Provider when configuring Trickster.
 
-See the [ClickHouse Support Document](./clickhouse.md) for more information.
+See the [ClickHouse Support Document](/docs/queries/clickhouse/) for more information.
 
 ### <img src="irondb_logo_60.png" alt="IRONdb logo" width=16 /> Circonus IRONdb
 

@@ -4,7 +4,7 @@ linkTitle: "Trickster 2.0"
 weight: 2
 date: 2021-06-25
 description: >
-  See your project in action!
+  See the latest updates to Trickster.
 ---
 
 
@@ -12,28 +12,28 @@ description: >
 
 2.0 continues to improve the Trickster project, with a ton of new features, bug fixes, and optimizations. Here's the quick rundown of what's new and improved:
 
-- we now use YAML for configuration, and provide [tooling](http://github.com/trickstercache/tricktool) to migrate a 1.x TOML configuration
-- example configurations are relocated to the [examples](../examples/conf) directory
-- the [Trickster docker-compose demo](../examples/docker-compose) has been relocated to the examples directory and updated to use latest version tags
-- we now use a common time series format internally for caching all supported TSDB's, rather than implementing each one separately
-- [health checking](./health.md) now uses a common package for all backend providers, rather than implementing separately in each backend, and we now support automated health check polling for any backend, and provide a global health status endpoint
-- we offer a brand new [Application Load Balancer](./alb.md) feature with unique and powerful options, like merging data from multiple backends into a single response.
+- We now use YAML for configuration, and provide [tooling](http://github.com/trickstercache/tricktool) to migrate a 1.x TOML configuration
+- Example configurations are relocated to the [examples/conf](https://github.com/trickstercache/trickster/tree/main/examples/conf) directory
+- The [Trickster docker-compose demo](https://github.com/trickstercache/trickster/tree/main/examples/docker-compose) has been relocated to the examples directory and updated to use latest version tags
+- We now use a common time series format internally for caching all supported TSDB's, rather than implementing each one separately
+- [Health checking](/docs/load-balancers/health/) now uses a common package for all backend providers, rather than implementing separately in each backend, and we now support automated health check polling for any backend, and provide a global health status endpoint
+- We offer a brand new [Application Load Balancer](/docs/load-balancers/alb/) feature with unique and powerful options, like merging data from multiple backends into a single response.
 - We've updated to Go 1.16
-- We've re-organized many packages in the codebase to be more easily importable by other projects. Over the course of the beta, we'll be publishing new patterns to the [examples](../examples/) folder for using Trickster packages in your own projects, including caching, acceleration and load balancing.
-- InfluxDB and ClickHouse now support additional output formats like CSV. More documentation will be provided over the course of the beta
+- We've re-organized many packages in the codebase to be more easily importable by other projects. Over the course of the beta, we'll be publishing new patterns to the [examples](https://github.com/trickstercache/trickster/tree/main/examples) folder for using Trickster packages in your own projects, including caching, acceleration and load balancing.
+- InfluxDB and ClickHouse now support additional output formats like CSV. More documentation will be provided over the course of the beta.
 
 ## New in Beta 2
 
-- For [InfluxDB](./influxdb.md), we've improved our compatibility with InfluxQL and hope you'll see improved cache hit rates. Flux support is not quite ready yet.
-- We've updated our "Backfill Tolerance" feature, which handles volatile data (e.g., real-time data that may not be immutable), to improve cache hit rates while ensuring volatile data is still refreshed. We've also added new options for controlling backfill tolerance thresholds. See the [example config](../examples/conf/example.full.yaml)
+- For [InfluxDB](/docs/queries/influxdb/), we've improved our compatibility with InfluxQL and hope you'll see improved cache hit rates. Flux support is not quite ready yet.
+- We've updated our "Backfill Tolerance" feature, which handles volatile data (e.g., real-time data that may not be immutable), to improve cache hit rates while ensuring volatile data is still refreshed. We've also added new options for controlling backfill tolerance thresholds. See the [example config](https://github.com/trickstercache/trickster/blob/main/examples/conf/example.full.yaml).
 - We've significantly revamped Trickster's compression capabilities. Beta 2 makes the following enhancements:
   - adds Brotli and Zstd compression support when serving responses (we already supported gzip and deflate), when included in an `Accept-Encoding` header
   - changes the cache compression storage format from Snappy to Brotli. A future beta will allow customization via configuration
   - passes through (or injects) an `Accept-Encoding` header to requests between Trickster and Origins, to support end-to-end content encoding. We previously were not accepting encodings from upstreams.
   - Provides a generic HTTP Handler package, supporting Zstd, Brotli, Gzip and Deflate; which is importable by any golang application
 - We fixed up a memory leak and refined the Prometheus label injection feature, so it plays nicely with the TSMerge ALB
-- Our [Rules Engine](./rule.md) now supports `rmatch` operations to permit regular expression-based routing against any part of the HTTP request.
-- You can now chain a collection [request rewriters](./request_rewriters.md) for more robust possibilities.
+- Our [Rules Engine](/docs/origins/rule) now supports `rmatch` operations to permit regular expression-based routing against any part of the HTTP request.
+- You can now chain a collection [request rewriters](/docs/paths/request-rewriters/) for more robust possibilities.
 
 ## Still to Come
 
@@ -74,4 +74,4 @@ Using [tricktool](http://github.com/trickstercache/tricktool) to migrate your co
 - `origin_type`, `cache_type` and `tracing_type` are now called `provider`.
 - Health checking configurations now reside in their own `healthcheck` subsection under `backends` and use simplified config names like `method`, `path`, etc.
 
-See the [example configuration](../examples/conf/example.full.yaml) for more information.
+See the [example configuration](https://github.com/trickstercache/trickster/blob/main/examples/conf/example.full.yaml) for more information.
