@@ -15253,6 +15253,9 @@ footer {
 .td-box--4 p > a {
   color: #369; }
 
+li .fab {
+  padding-right: .25rem; }
+
 .td-404 main {
   max-width: 1000px;
   margin: auto; }
