@@ -1,9 +1,6 @@
 ---
 title: "About Trickster"
 linkTitle: "About"
-menu:
-  main:
-    weight: 40
 
 ---
 
