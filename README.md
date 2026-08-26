@@ -1,6 +1,6 @@
-# Trickster documentation
+# trickstercache.org
 
-This repository contains the [documentation site](https://trickstercache.org/) for Trickster.
+This repository contains the documentation site for Trickster, available at <https://trickstercache.org>.
 
 ## Making a contribution
 
