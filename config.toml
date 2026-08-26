@@ -14,9 +14,13 @@ contentDir = "content/en"
 defaultContentLanguage = "en"
 defaultContentLanguageInSubdir = false
 # Useful when translating.
-enableMissingTranslationPlaceholders = true
+enableMissingTranslationPlaceholders = false
 
-disableKinds = ["taxonomy", "taxonomyTerm"]
+disableKinds = ["taxonomy"]
+
+# Allow authored HTML under content/ (denied by default since Hugo 0.162).
+[security]
+allowContent = ['.*']
 
 # Highlighting config
 pygmentsCodeFences = true
@@ -91,9 +95,11 @@ version = "0.0"
 # point people to the main doc site.
 url_latest_version = "https://trickster.io"
 
-# Repository configuration (URLs for in-page links to opening issues and suggesting changes)
+# Used for last-modified commit links. In-page "Edit this page" / issue links
+# are disabled (see layouts/partials/page-meta-links.html) because docs content
+# is synced from the trickster repo and would be overwritten here.
 github_repo = "https://github.com/trickstercache/trickstercache.org"
-# An optional link to a related project repo. For example, the sibling repository where your product code lives.
+# Related project repo (footer / community links). Not used for in-page edit links.
 github_project_repo = "https://github.com/trickstercache/trickster"
 
 # Specify a value here if your content directory is not in your repo's root directory
@@ -145,17 +151,6 @@ no = 'Sorry to hear that. Please <a href="https://github.com/trickstercache/tric
 enable = false
 
 [params.links]
-# End user relevant links. These will show up on left side of footer and in the community page if you have one.
-[[params.links.user]]
-	name ="Twitter"
-	url = "https://twitter.com/trickstercache"
-	icon = "fab fa-twitter"
-        desc = "Follow us on Twitter to get the latest news!"
-[[params.links.user]]
-	name = "Stack Overflow"
-	url = "https://stackoverflow.com/questions/tagged/trickster"
-	icon = "fab fa-stack-overflow"
-        desc = "Practical questions and curated answers"
 # Developer relevant links. These will show up on right side of footer and in the community page if you have one.
 [[params.links.developer]]
 	name = "Trickster on GitHub"

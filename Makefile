@@ -1,6 +1,10 @@
 yarn:
 	yarn
 
+# Sync docs from the main trickster repo (override with TRICKSTER_REPO/TRICKSTER_REF)
+sync-docs:
+	./scripts/sync-docs.sh
+
 serve: yarn
 	hugo server \
 		--buildDrafts \
