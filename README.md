@@ -4,7 +4,7 @@ This repository contains the documentation site for Trickster, available at <htt
 
 ## Making a contribution
 
-To make a contribution to the documentation, [file an issue](https://github.com/trickstercache/trickstercache.org/issues/new/choose) or fork the project and submit a [Pull Request](https://github.com/trickstercache/trickstercache.org/pulls). For specific instructions see (About Forks)[https://docs.github.com/en/github/collaborating-with-pull-requests/working-with-forks/about-forks] and [Creating a Pull Request](https://docs.github.com/en/github/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request) in the GitHub documentation.
+To make a contribution to the documentation, [file an issue](https://github.com/trickstercache/trickstercache.org/issues/new/choose) or fork the project and submit a [Pull Request](https://github.com/trickstercache/trickstercache.org/pulls). For specific instructions see [About Forks](https://docs.github.com/en/github/collaborating-with-pull-requests/working-with-forks/about-forks) and [Creating a Pull Request](https://docs.github.com/en/github/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request) in the GitHub documentation.
 
 Note that the actual documentation content is [synced](scripts/sync-docs.sh) from the [main Trickster repo's 'docs' directory](https://github.com/trickstercache/trickster/tree/main/docs). So if you want to fix something in the actual documentation, contribute that to the main repo. Contributions to this repo should be about the actual Docs site (CSS/styling/layout, deployment automation, etc.) rather than its content.
 
