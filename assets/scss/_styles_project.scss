@@ -1,31 +1,25 @@
 // Trickster overrides
 
-// override !important from theme to apply uppercase to name
-.navbar-brand > .text-uppercase {
-    text-transform: capitalize !important;
-    position: relative;
-    top: 2px;
-}
-
 .td-navbar .td-search-input {
     background: #fff;
     border: 1px #ddd solid;
 }
 
 .td-navbar .navbar-brand {
-    max-width: 70px;
+    display: flex;
+    align-items: center;
+    max-width: none;
 }
 
-@media only screen and (min-width: 320px) {
-    .navbar-logo {
-        display: block;
-    }
+.td-navbar .navbar-brand .navbar-logo {
+    display: inline-block;
+    height: 30px;
+    width: auto;
 }
 
-@media only screen and (min-width: 760px) {
-    .navbar-logo {
-        display: inline-block;
-    }
+.td-navbar .navbar-github-link {
+    font-size: 1.25rem;
+    line-height: 1;
 }
 
 .mr-4, .mx-4{
@@ -42,6 +36,27 @@
 
 .td-cover-block--height-full {
     min-height:200px;
+}
+
+.td-cover-wordmark {
+    display: block;
+    height: 3rem;
+    width: auto;
+    max-width: 90%;
+    margin: 0 auto;
+    filter: brightness(0) invert(1);
+
+    @media only screen and (min-width: 768px) {
+        height: 4.5rem;
+    }
+}
+
+.td-box .lead-logo {
+    display: block;
+    height: 125px;
+    width: 125px;
+    max-width: none;
+    margin: 0 auto 1.5rem;
 }
 
 .td-main #td-cover-block-0 {
