@@ -10,9 +10,7 @@ Note that the actual documentation content is [synced](scripts/sync-docs.sh) fro
 
 ## Finding files to edit
 
-The Trickster documentation site uses Hugo with the Docsy theme. The following instructions specify where to find frequently edited files. 
-
-For more detailed information on the site infrastructure, see the [Hugo](https://gohugo.io/documentation/) and [Docsy](https://www.docsy.dev/docs/) documentation.
+The Trickster documentation site uses Hugo with the Docsy theme. For more detailed information on the site infrastructure, see the [Hugo](https://gohugo.io/documentation/) and [Docsy](https://www.docsy.dev/docs/) documentation.
 
 ### Editing styles
 
