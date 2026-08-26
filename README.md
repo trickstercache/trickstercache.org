@@ -21,19 +21,6 @@ To override styles, edit the SCSS files in the [assets/scss](https://github.com/
 - `_styles_project.scss`: edit this file to override Docsy styles or change the current styles.
 - `_variables_project.scss`: declare SCSS variables in this file that you can use elsewhere.
 
-### Editing documentation content
-
-To edit Trickster documentation content, edit the markdown files in [content/en/docs](https://github.com/trickstercache/trickstercache.org/tree/main/content/en/docs). For guidance on how to write in markdown, see GitHub Guides [Mastering Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Editing other parts of the site
-
-To edit other areas of the Trickster website, see the following directories:
-
-- About: [content/en/about](https://github.com/trickstercache/trickstercache.org/tree/main/content/en/about)
-- Blog: [content/en/blog](https://github.com/trickstercache/trickstercache.org/tree/main/content/en/blog)
-- Community: [content/en/community](https://github.com/trickstercache/trickstercache.org/tree/main/content/en/community)
-
-
 ## Using the documentation site locally 
 
 ### Prerequisite
