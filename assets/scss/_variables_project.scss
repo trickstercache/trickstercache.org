@@ -4,12 +4,12 @@ Add styles or override variables from the theme here.
 
 */
 
-$primary: #fafafa;
-$secondary: #2d8a4e;
-
 $trickster-blue: #369;
 $trickster-light-blue: lighten($trickster-blue, 10%);
-$trickster-dark-blue: darken($trickster-blue, 20%);
+$trickster-dark-blue: darken($trickster-blue, 10%);
+
+$primary: #fafafa;
+$secondary: $trickster-dark-blue;
 
 $readable-gray: #444;
 $info: lighten(#C0E0DE, 5%);
