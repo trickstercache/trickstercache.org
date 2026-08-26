@@ -1,14 +1,12 @@
 ---
 title: "Cache Options"
 linkTitle: "Cache Options"
-weight: 1
-description: >
-  Trickster supports a number of caches.
+weight: 10
 ---
 
 ## Supported Caches
 
-Trickster supports several cache types:
+There are several cache types supported by Trickster
 
 * In-Memory (default)
 * Filesystem
@@ -16,7 +14,7 @@ Trickster supports several cache types:
 * BadgerDB
 * Redis (basic, cluster, and sentinel)
 
-The sample configuration, [trickster/examples/conf/example.full.yaml](https://github.com/trickstercache/trickster/blob/main/examples/conf/example.full.yaml), demonstrates how to select and configure a particular cache type, as well as how to configure generic cache configurations such as Retention Policy.
+The sample configuration ([examples/conf/example.full.yaml](https://github.com/trickstercache/trickster/blob/main/examples/conf/example.full.yaml)) demonstrates how to select and configure a particular cache type, as well as how to configure generic cache configurations such as Retention Policy.
 
 ## In-Memory
 
@@ -48,9 +46,24 @@ Ensure that your Redis instance is located close to your Trickster instance in o
 
 In addition to basic Redis, Trickster also supports Redis Cluster and Redis Sentinel. Refer to the sample configuration for customizing the Redis client type.
 
-## Purging the Cache
+Trickster supports Redis servers that use TLS encryption by setting `use_tls: true` in the config. Refer to the sample configuration for more info.
 
-Cache purges should not be necessary, but in the event that you wish to do so, the following steps should be followed based upon your selected Cache Type.
+## Purging an Item from the Cache
+
+You can purge an item from the cache by making a call to the purge endpoint, as follows:
+
+```http://${trickster-address}:${mgmt-port}/trickster/purge/path/${backendName}/${path/to/purge}```
+
+For example, if you want to purge `/api/v1/labels` from backend `prom1`, a curl might look like:
+
+```
+curl http://localhost:8484/trickster/purge/path/prom1/api/v1/labels
+```
+
+
+## Purging the Full Cache
+
+Full Cache purges should not be necessary, but in the event that you wish to do so, the following steps should be followed based upon your selected Cache Type.
 
 A future release will provide a mechanism to fully purge the cache (regardless of the underlying cache type) without stopping a running Trickster instance.
 
@@ -79,7 +92,7 @@ Stop the Trickster process and delete the configured BadgerDB path.
 
 ## Cache Status
 
-Trickster reports several cache statuses in metrics, logs, and tracing, which are listed and described in the table below.
+Trickster reports several cache statuses in metrics, logs, tracing, and the [`X-Trickster-Result`](/docs/observability/trickster-result/) response header, which are listed and described in the table below.
 
 | Status | Description |
 | ----- | ----- |
@@ -89,5 +102,8 @@ Trickster reports several cache statuses in metrics, logs, and tracing, which ar
 | phit | The object was cached for some of the data requested, but not all |
 | nchit | The response was served from the [Negative Cache](/docs/caching/negative-caching/) |
 | rhit | The object was served from cache to the client, after being revalidated for freshness against the origin |
+| purge | The cache key was purged as directed by a request or response header |
 | proxy-only | The request was proxied 1:1 to the origin and not cached |
 | proxy-error | The upstream request needed to fulfill an associated client request returned an error |
+| error | Trickster encountered a cache lookup or cache handling error |
+| proxy-hit | The request joined an existing in-flight origin fetch for the same cache key |

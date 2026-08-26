@@ -1,8 +1,7 @@
 ---
 title: "Caching"
 linkTitle: "Caching"
-weight: 4
+weight: 30
 description: >
-  The following articles exlpain how Trickster leverages caching.
+  Cache data stores and behaviors common to all of Trickster's caching modes.
 ---
-

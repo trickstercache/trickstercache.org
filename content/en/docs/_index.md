@@ -1,4 +1,3 @@
-
 ---
 title: "Documentation"
 linkTitle: "Documentation"
@@ -8,6 +7,6 @@ menu:
     weight: 20
 ---
 
-Explore how to use Trickster to accelerate your projects. If you're new to Trickster, check out the [Overview](/docs/overview/) and the [Gettting Started](/docs/getting-started).  
-
-
+Explore how to use Trickster to accelerate your projects. If you're new to
+Trickster, check out [Where to Place Trickster](/docs/getting-started/placement/)
+and the [Quickstart](/docs/quickstart/).

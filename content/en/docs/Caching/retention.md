@@ -1,14 +1,12 @@
 ---
 title: "Trickster Caching Retention Policies"
-linkTitle: "Trickster Caching Retention Policies"
-weight: 2
-description: >
-  How long Trickster retains data
+linkTitle: "Retention Policies"
+weight: 20
 ---
 
 ## Basic HTTP Backends
 
-Trickster will respect HTTP 1.0, 1.1 and 2.0 caching directives from both the downstream client and the upstream origin when determining object cacheability and TTL. You can override the TTL by setting a custom `Cache-Control` header on a per-[Path Config](/docs/paths/paths/) basis.
+Trickster will respect HTTP 1.0, 1.1 and 2.0 caching directives from both the downstream client and the upstream origin when determining object cacheability and TTL. You can override the TTL by setting a custom `Cache-Control` header on a per-[Path Config](/docs/request-handling/paths/) basis.
 
 ### Cache Object Evictions
 
@@ -32,7 +30,7 @@ TTL settings for each Backend configured in Trickster can be customized independ
 
 Separately from the TTL of a time series cache object, Trickster allows you to control the size of each timeseries object, represented as a count of maximum timestamps in the cache object, on a _per origin_ basis. This configuration is known as the `timeseries_retention_factor` (TRF), and has a default of 1024. Most dashboards for most users request and display approximately 300-to-400 timestamps, so the default TRF allows users to still recall recently-displayed data from the Trickster cache for a period of time after the data has aged off of real-time views.
 
-If you have users with a high-resolution dashboard configuration (e.g., a 24-hour view with a 1-minute step, amounting to 1440 data points per graph), then you may benefit from increasing the `timeseries_retention_factor` accordingly. If you use a managed cache (see [caches](./caches.md)) and increase the `timeseries_retention_factor`, the overall size of your cache will not change; the result will be fewer objects in cache, with the timeseries objects having a larger share of the overall cache size with more aged data.
+If you have users with a high-resolution dashboard configuration (e.g., a 24-hour view with a 1-minute step, amounting to 1440 data points per graph), then you may benefit from increasing the `timeseries_retention_factor` accordingly. If you use a managed cache (see [caches](/docs/caching/caches/)) and increase the `timeseries_retention_factor`, the overall size of your cache will not change; the result will be fewer objects in cache, with the timeseries objects having a larger share of the overall cache size with more aged data.
 
 #### Time Series Data Evictions
 
