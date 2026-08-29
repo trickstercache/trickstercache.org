@@ -1,7 +1,7 @@
 ---
 title: "MySQL Provider"
 linkTitle: "MySQL"
-weight: 40
+weight: 50
 ---
 
 Trickster can accept native MySQL client connections, proxy each authenticated
@@ -61,7 +61,7 @@ caches:
 backends:
   mysql-primary:
     provider: mysql
-    listener_name: mysql-native
+    listener_names: [mysql-native]
     authenticator_name: mysql-clients
     origin_url: mysql://trickster_ro:REDACTED@mysql.example:3306/analytics
     cache_name: mysql-cache
@@ -345,7 +345,7 @@ backends:
 
   mysql-by-tenant:
     provider: alb
-    listener_name: mysql-routed
+    listener_names: [mysql-routed]
     authenticator_name: tenant-clients
     alb:
       mechanism: ur

@@ -1,7 +1,7 @@
 ---
 title: "Rule Backend"
 linkTitle: "Rule Backend"
-weight: 20
+weight: 30
 ---
 
 The Rule Backend is not really a true Backend; it only routes inbound requests to other configured Backends, based on how they match against the Rule's cases.

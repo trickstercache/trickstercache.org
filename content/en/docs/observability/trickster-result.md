@@ -1,7 +1,7 @@
 ---
 title: "X-Trickster-Result Header"
 linkTitle: "X-Trickster-Result Header"
-weight: 30
+weight: 40
 ---
 
 Trickster adds the `X-Trickster-Result` response header to describe how it handled a request. The header is intended for debugging cache behavior, proxy fallbacks, and partial origin fetches.

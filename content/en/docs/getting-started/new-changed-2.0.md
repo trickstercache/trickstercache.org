@@ -29,7 +29,7 @@ Trickster 2.0 is a near-complete rewrite of the project with performance, durabi
 - **Request Rewriters**: You can now chain a collection of [request rewriters](/docs/request-handling/request_rewriters/) for more robust request transformation possibilities
 - **Cache Purging**: We now support purging specific cache items by Key (on the public ports) or Path (on the mgmt port). Read more in the [cache documentation](/docs/caching/caches/)
 - **Simulated Latency**: You can use Trickster for [Simulated Latency](/docs/request-handling/simulated-latency/) in lab environments
-- We've added support for InfluxDB 2.0 and Flux Query Language and are targeting support for InfluxDB 3.0 in Trickster v2.1.x.
+- We've added support for InfluxDB 2.0 and Flux Query Language, plus InfluxDB 3.x via the native v3 HTTP API (SQL and InfluxQL) and an optional Apache Arrow Flight SQL (gRPC) proxy. See the [InfluxDB support doc](/docs/time-series-caching/providers/influxdb/) for details.
 
 ### Configuration & Security
 - **YAML Configuration**: Trickster 2.0 uses YAML for configuration instead of TOML
