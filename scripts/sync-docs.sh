@@ -59,9 +59,9 @@ caching|Caching|30|Cache data stores and behaviors common to all of Trickster's 
 object-caching|Object Caching|40|Accelerating generic HTTP objects with Trickster's Reverse Proxy Cache.
 time-series-caching|Time Series Caching|50|Accelerating time series databases with Trickster's Delta Proxy Cache.
 time-series-caching/providers|Providers|100|Guides for each supported time series provider.
-routing|Routing & Load Balancing|60|Directing requests across multiple backends with the ALB and Rule engine.
+routing|Routing & Load Balancing|60|Directing requests across multiple backends with the ALB, autodiscovery and Rule engine.
 request-handling|Request Handling|70|Customizing how Trickster processes HTTP requests and responses.
-observability|Observability|80|Metrics, distributed tracing, and debugging Trickster's behavior.
+observability|Observability|80|Metrics, logs, distributed tracing, and debugging Trickster's behavior.
 "
 
 # ---------------------------------------------------------------------------
@@ -88,12 +88,14 @@ supported-backend-providers.md|time-series-caching|Supported Providers
 per-query-instructions.md|time-series-caching|
 query-range-limits.md|time-series-caching|
 timeseries_sharding.md|time-series-caching|Request Sharding
+flight-sql.md|time-series-caching|Flight SQL Listeners
 prometheus.md|time-series-caching/providers|Prometheus
 influxdb.md|time-series-caching/providers|InfluxDB
 clickhouse.md|time-series-caching/providers|ClickHouse
 graphite.md|time-series-caching/providers|Graphite
 mysql.md|time-series-caching/providers|MySQL
 alb.md|routing|Application Load Balancer
+alb-autodiscovery.md|routing|ALB Autodiscovery
 rule.md|routing|Rule Backend
 paths.md|request-handling|Paths
 request_rewriters.md|request-handling|
@@ -102,6 +104,7 @@ cors.md|request-handling|CORS
 simulated-latency.md|request-handling|
 metrics.md|observability|Metrics
 tracing.md|observability|Tracing
+access-logs.md|observability|Access & Error Logs
 trickster-result.md|observability|X-Trickster-Result Header
 "
 

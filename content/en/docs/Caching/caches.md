@@ -1,6 +1,6 @@
 ---
-title: "Cache Options"
-linkTitle: "Cache Options"
+title: "Cache Overview"
+linkTitle: "Cache Overview"
 weight: 10
 ---
 
