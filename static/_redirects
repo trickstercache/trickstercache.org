@@ -1,0 +1,13 @@
+# Netlify redirects. Hugo copies static/ to the publish root verbatim, which is
+# where Netlify reads this file. Rules are evaluated top-down; keep specific
+# rules above the catch-all.
+
+# Docs pages relocated when the left navigation was reorganized (2026-09).
+/docs/quickstart/                        /docs/getting-started/quickstart/        301
+/docs/backends/tls/                      /docs/listeners/tls/                     301
+/docs/time-series-caching/flight-sql/    /docs/listeners/flight-sql/              301
+/docs/getting-started/new-changed-2.0/   /docs/release-notes/new-changed-2.0/     301
+/docs/getting-started/new-changed-2.1/   /docs/release-notes/new-changed-2.1/     301
+
+# Custom 404 page.
+/* /404.html 404

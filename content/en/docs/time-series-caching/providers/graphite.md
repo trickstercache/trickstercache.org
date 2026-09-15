@@ -1,7 +1,7 @@
 ---
 title: "Graphite Provider"
 linkTitle: "Graphite"
-weight: 40
+weight: 50
 ---
 
 Trickster accelerates Graphite's render API with the Delta Proxy Cache: it

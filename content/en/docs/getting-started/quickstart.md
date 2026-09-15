@@ -1,6 +1,6 @@
 ---
-title: "Quickstart"
-linkTitle: "Quickstart"
+title: "Quick Start"
+linkTitle: "Quick Start"
 weight: 1
 description: >
   Try Trickster with Docker Compose and minimal setup.

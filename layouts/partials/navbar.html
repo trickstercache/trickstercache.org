@@ -2,6 +2,9 @@
 <nav class="js-navbar-scroll navbar navbar-expand navbar-dark {{ if $cover}} td-navbar-cover {{ end }}flex-column flex-md-row td-navbar">
         <a class="navbar-brand" href="{{ .Site.Home.RelPermalink }}">
 		{{ if .Site.Params.ui.navbar_logo }}<img class="navbar-logo" src="{{ "branding/logos/trickster-horizontal.svg" | relURL }}" alt="Trickster" height="30">{{ end }}
+		{{/* Docs version, written to data/trickster.toml by scripts/sync-docs.sh when
+		     syncing from a release tag. Absent for branch (main) syncs. */}}
+		{{ with .Site.Data.trickster }}{{ with .version }}<span class="navbar-version" title="Documentation for Trickster {{ . }}">{{ . }}</span>{{ end }}{{ end }}
 	</a>
 	<div class="td-navbar-nav-scroll ml-md-auto" id="main_navbar">
 		<ul class="navbar-nav mt-2 mt-lg-0">

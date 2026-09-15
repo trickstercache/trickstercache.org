@@ -1,0 +1,95 @@
+# Publishes trickstercache.org to Netlify when a semantic version tag
+# (e.g. v2.1.0) is pushed. Pushes to main do NOT deploy: Netlify's own
+# git-triggered production builds are skipped via netlify.toml. See the
+# "Releases and deployment" section of README.md for setup details.
+name: Deploy to Netlify
+
+on:
+  push:
+    tags:
+      # GitHub filter globs, not regexes; the "Validate tag" step below
+      # enforces the full semantic-version format.
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing semantic version tag to (re)deploy, e.g. v2.1.0'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# Never run two production deploys at once; queue them instead.
+concurrency:
+  group: netlify-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    steps:
+      - name: Validate tag
+        run: |
+          if ! [[ "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'${TAG}' is not a semantic version tag (expected e.g. v2.1.0)"
+            exit 1
+          fi
+
+      - name: Check out ${{ env.TAG }}
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          # config.toml sets enableGitInfo = true; full history keeps lastmod dates correct.
+          fetch-depth: 0
+
+      - name: Read Hugo version from netlify.toml
+        id: hugo
+        run: |
+          v="$(sed -n 's/^HUGO_VERSION *= *"\(.*\)"/\1/p' netlify.toml)"
+          if [ -z "${v}" ]; then
+            echo "::error::HUGO_VERSION not found in netlify.toml"
+            exit 1
+          fi
+          echo "version=${v}" >> "${GITHUB_OUTPUT}"
+
+      - name: Set up Hugo ${{ steps.hugo.outputs.version }}
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: ${{ steps.hugo.outputs.version }}
+          extended: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      # Docsy runs PostCSS (autoprefixer) during production builds.
+      - name: Install PostCSS toolchain
+        run: yarn install --frozen-lockfile
+
+      # Syncs docs from the SAME tag of the trickster repo and writes the
+      # version to data/trickster.toml, which the site header renders.
+      - name: Sync docs from trickster ${{ env.TAG }}
+        run: ./scripts/sync-docs.sh "${TAG}"
+
+      - name: Build site
+        run: make production-build
+
+      - name: Deploy to Netlify
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          if [ -z "${NETLIFY_AUTH_TOKEN}" ] || [ -z "${NETLIFY_SITE_ID}" ]; then
+            echo "::error::NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID repository secrets must be set"
+            exit 1
+          fi
+          # The site is already built; --no-build uploads public/ as-is.
+          npx --yes netlify-cli deploy --prod --no-build --dir=public \
+            --message "trickstercache.org ${TAG} ($(git rev-parse --short HEAD))"

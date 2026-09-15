@@ -1,6 +1,12 @@
 [build]
 publish = "public"
 command = "make production-build"
+# Production is published by .github/workflows/deploy.yml when a semantic
+# version tag is pushed (see README.md, "Releases and deployment"). Netlify
+# skips a git-triggered build when this command exits 0, so production builds
+# (pushes to main) are skipped while deploy previews for pull requests and
+# branch deploys still build. CLI deploys from the workflow are not affected.
+ignore = 'test "$CONTEXT" = "production"'
 
 [build.environment]
 HUGO_VERSION = "0.165.0"

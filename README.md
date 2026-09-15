@@ -8,6 +8,56 @@ To make a contribution to the documentation, [file an issue](https://github.com/
 
 Note that the actual documentation content is [synced](scripts/sync-docs.sh) from the [main Trickster repo's 'docs' directory](https://github.com/trickstercache/trickster/tree/main/docs). So if you want to fix something in the actual documentation, contribute that to the main repo. Contributions to this repo should be about the actual Docs site (CSS/styling/layout, deployment automation, etc.) rather than its content.
 
+## Releases and deployment
+
+The site is published to Netlify by the
+[Deploy to Netlify](.github/workflows/deploy.yml) GitHub Actions workflow whenever a
+semantic version tag (`vX.Y.Z`, optionally with a pre-release suffix such as
+`v2.1.0-beta1`) is pushed to this repository. Tag this repo with the same version as
+the Trickster release being documented:
+
+```
+git tag v2.1.0
+git push origin v2.1.0
+```
+
+The workflow then:
+
+1. checks out that tag of this repository;
+2. runs `scripts/sync-docs.sh v2.1.0`, which syncs the docs from the **same tag** of the
+   [trickster repo](https://github.com/trickstercache/trickster), so the published site
+   always matches that release's documentation, and records the version in
+   `data/trickster.toml`;
+3. builds the site with Hugo, rendering the version next to the logo in the site header
+   so readers can tell which documentation version they are looking at; and
+4. publishes the result to Netlify's production site.
+
+An already-tagged version can be re-deployed with the workflow's **Run workflow**
+button in the GitHub Actions tab.
+
+### One-time setup
+
+- Add two repository secrets under GitHub **Settings → Secrets and variables → Actions**:
+  `NETLIFY_AUTH_TOKEN` (a Netlify personal access token) and `NETLIFY_SITE_ID` (the
+  site's *Site ID* from Netlify **Site configuration → General → Site details**).
+- `netlify.toml` tells Netlify to skip its own git-triggered production builds (its
+  `ignore` command exits 0 when Netlify's `CONTEXT` is `production`), so pushes to
+  `main` no longer publish anything while deploy previews for pull requests keep
+  working. After the first tag deploy, confirm in the Netlify deploy log that a push
+  to `main` shows as skipped rather than published. If the repository is
+  ever unlinked from Netlify entirely, pull request previews stop but the tag workflow
+  still deploys.
+
+### Previewing a specific version locally
+
+```
+make sync-docs VERSION=v2.1.0
+make serve
+```
+
+`make sync-docs` without `VERSION` syncs from `main` and the site shows no version
+label.
+
 ## Finding files to edit
 
 The Trickster documentation site uses Hugo with the Docsy theme. For more detailed information on the site infrastructure, see the [Hugo](https://gohugo.io/documentation/) and [Docsy](https://www.docsy.dev/docs/) documentation.

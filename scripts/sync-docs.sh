@@ -12,25 +12,73 @@
 # on every run, EXCEPT for the site-authored files listed in KEEP_FILES.
 #
 # Usage:
-#   ./scripts/sync-docs.sh
+#   ./scripts/sync-docs.sh [VERSION]
+#
+#   VERSION  Optional semantic version tag of the trickster repo, e.g. v2.1.0.
+#            When given, the docs are synced from that tag (instead of main)
+#            and the version is written to data/trickster.toml, which the site
+#            renders next to the logo so readers know which release they are
+#            looking at. The release workflow (.github/workflows/deploy.yml)
+#            passes the tag that triggered it. Without a VERSION the site shows
+#            no version label.
 #
 # Environment overrides:
 #   TRICKSTER_REPO  git URL of the trickster repo (default: upstream GitHub)
-#   TRICKSTER_REF   branch or tag to sync from (default: main)
+#   TRICKSTER_REF   branch or tag to sync from when no VERSION is given
+#                   (default: main)
 
 set -euo pipefail
 
+usage() {
+  cat <<'EOF'
+Usage: scripts/sync-docs.sh [VERSION]
+
+Sync Trickster docs from the trickster repo into this site.
+
+  VERSION   Optional semantic version tag (e.g. v2.1.0). Docs are synced from
+            that tag and the version is shown in the site header.
+
+Environment:
+  TRICKSTER_REPO  git URL of the trickster repo (default: upstream GitHub)
+  TRICKSTER_REF   branch/tag to sync when no VERSION is given (default: main)
+EOF
+}
+
+VERSION=""
+case "${1:-}" in
+  -h|--help) usage; exit 0 ;;
+  "") ;;
+  -*) echo "ERROR: unknown option '$1'" >&2; usage >&2; exit 2 ;;
+  *) VERSION="$1" ;;
+esac
+if [ "$#" -gt 1 ]; then
+  echo "ERROR: expected at most one argument" >&2
+  usage >&2
+  exit 2
+fi
+
 REPO_URL="${TRICKSTER_REPO:-https://github.com/trickstercache/trickster.git}"
 REF="${TRICKSTER_REF:-main}"
-GH_BLOB="https://github.com/trickstercache/trickster/blob/${REF}"
+
+# A VERSION argument must be a semantic version (leading 'v' optional) and
+# takes precedence over TRICKSTER_REF as the ref to clone.
+SEMVER_RE='^v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'
+if [ -n "${VERSION}" ]; then
+  if ! [[ "${VERSION}" =~ ${SEMVER_RE} ]]; then
+    echo "ERROR: '${VERSION}' is not a semantic version (expected e.g. v2.1.0)" >&2
+    exit 2
+  fi
+  REF="${VERSION}"
+fi
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DOCS_DST="${ROOT}/content/en/docs"
 IMG_DST="${ROOT}/static/images/docs"
+DATA_FILE="${ROOT}/data/trickster.toml"
 
 # Site-authored pages under content/en/docs that are not sourced from the
 # trickster repo and must survive a sync.
-KEEP_FILES="quickstart.md"
+KEEP_FILES="getting-started/quickstart.md"
 
 # Source files/dirs to skip entirely (shell glob patterns, matched against
 # the path relative to the trickster repo's docs/ directory). Skipped files
@@ -54,14 +102,17 @@ is_skipped() {
 # ---------------------------------------------------------------------------
 SECTIONS="
 getting-started|Getting Started|10|How to get up and running with Trickster.
-backends|Backends|20|Configuring the upstream origins that Trickster accelerates.
-caching|Caching|30|Cache data stores and behaviors common to all of Trickster's caching modes.
-object-caching|Object Caching|40|Accelerating generic HTTP objects with Trickster's Reverse Proxy Cache.
-time-series-caching|Time Series Caching|50|Accelerating time series databases with Trickster's Delta Proxy Cache.
+backends|Backends|20|Configuring the upstream origins that Trickster accelerates: multiple backends, health checks, authentication and AWS request signing.
+listeners|Listeners & TLS|30|Inbound listeners and the protocols they serve: TLS certificates, HTTP/3 and Apache Arrow Flight SQL. Base listener settings, trusted proxies and TCP/UDP stream listeners are described in [Configuring Trickster](/docs/getting-started/configuring/#inbound-listeners).
+caching|Caching|40|Cache data stores and behaviors common to all of Trickster's caching modes.
+object-caching|Object Caching|50|Accelerating generic HTTP objects with Trickster's Reverse Proxy Cache.
+time-series-caching|Time Series Caching|60|Accelerating time series databases with Trickster's Delta Proxy Cache.
 time-series-caching/providers|Providers|100|Guides for each supported time series provider.
-routing|Routing & Load Balancing|60|Directing requests across multiple backends with the ALB, autodiscovery and Rule engine.
-request-handling|Request Handling|70|Customizing how Trickster processes HTTP requests and responses.
-observability|Observability|80|Metrics, logs, distributed tracing, and debugging Trickster's behavior.
+routing|Routing & Load Balancing|70|Directing requests across multiple backends with the ALB, autodiscovery and Rule engine.
+request-handling|Request Handling|80|Customizing how Trickster processes HTTP requests and responses.
+kubernetes|Kubernetes|90|Running Trickster on Kubernetes, and using it as a Gateway API and Ingress controller with cluster-native caching policy.
+observability|Observability|100|Metrics, logs, distributed tracing, and debugging Trickster's behavior.
+release-notes|Release Notes|110|What's new and changed in each Trickster release.
 "
 
 # ---------------------------------------------------------------------------
@@ -73,11 +124,13 @@ observability|Observability|80|Metrics, logs, distributed tracing, and debugging
 MANIFEST="
 placement.md|getting-started|
 configuring.md|getting-started|
-new-changed-2.0.md|getting-started|What's New in 2.0
 multi-origin.md|backends|Multiple Backends
-authenticator.md|backends|
-tls.md|backends|
 health.md|backends|
+authenticator.md|backends|
+aws.md|backends|
+tls.md|listeners|
+http3.md|listeners|
+flight-sql.md|listeners|Flight SQL Listeners
 caches.md|caching|
 retention.md|caching|Retention Policies
 chunked_caching.md|caching|
@@ -88,10 +141,10 @@ supported-backend-providers.md|time-series-caching|Supported Providers
 per-query-instructions.md|time-series-caching|
 query-range-limits.md|time-series-caching|
 timeseries_sharding.md|time-series-caching|Request Sharding
-flight-sql.md|time-series-caching|Flight SQL Listeners
 prometheus.md|time-series-caching/providers|Prometheus
-influxdb.md|time-series-caching/providers|InfluxDB
 clickhouse.md|time-series-caching/providers|ClickHouse
+influxdb.md|time-series-caching/providers|InfluxDB
+druid.md|time-series-caching/providers|Apache Druid
 graphite.md|time-series-caching/providers|Graphite
 mysql.md|time-series-caching/providers|MySQL
 alb.md|routing|Application Load Balancer
@@ -102,10 +155,17 @@ request_rewriters.md|request-handling|
 body.md|request-handling|Request Body Handling
 cors.md|request-handling|CORS
 simulated-latency.md|request-handling|
+kubernetes-deploy.md|kubernetes|Deploying on Kubernetes
+kubernetes-gateway.md|kubernetes|Gateway API
+kubernetes-ingress.md|kubernetes|Ingress
+kubernetes-cache-policy.md|kubernetes|Cache Policy
+kubernetes-rbac.md|kubernetes|Controller RBAC
 metrics.md|observability|Metrics
 tracing.md|observability|Tracing
 access-logs.md|observability|Access & Error Logs
 trickster-result.md|observability|X-Trickster-Result Header
+new-changed-2.1.md|release-notes|What's New in 2.1
+new-changed-2.0.md|release-notes|What's New in 2.0
 "
 
 # Renamed/removed source files still referenced by links: old-name|new-name
@@ -126,8 +186,29 @@ section_for() {
 TMP="$(mktemp -d)"
 trap 'rm -rf "${TMP}"' EXIT
 
+clone_ref() {
+  git clone --quiet --depth 1 --branch "$1" "${REPO_URL}" "${TMP}/trickster" \
+    2>>"${TMP}/clone.err"
+}
+
 echo ">> Cloning ${REPO_URL} (${REF}) ..."
-git clone --quiet --depth 1 --branch "${REF}" "${REPO_URL}" "${TMP}/trickster"
+if ! clone_ref "${REF}"; then
+  # Tags in the trickster repo carry a 'v' prefix; tolerate a VERSION given
+  # without one (or vice versa) so a release tag on either repo works.
+  alt=""
+  if [ -n "${VERSION}" ]; then
+    case "${REF}" in v*) alt="${REF#v}" ;; *) alt="v${REF}" ;; esac
+  fi
+  if [ -n "${alt}" ] && clone_ref "${alt}"; then
+    echo ">>   ref '${REF}' not found; using '${alt}'"
+    REF="${alt}"
+  else
+    cat "${TMP}/clone.err" >&2
+    echo "ERROR: could not clone ${REPO_URL} at ref '${REF}'" >&2
+    exit 1
+  fi
+fi
+GH_BLOB="https://github.com/trickstercache/trickster/blob/${REF}"
 SRC="${TMP}/trickster/docs"
 
 if [ ! -d "${SRC}" ]; then
@@ -242,8 +323,11 @@ menu:
 ---
 
 Explore how to use Trickster to accelerate your projects. If you're new to
-Trickster, check out [Where to Place Trickster](/docs/getting-started/placement/)
-and the [Quickstart](/docs/quickstart/).
+Trickster, start with the [Quick Start](/docs/getting-started/quickstart/) and
+[Where to Place Trickster](/docs/getting-started/placement/), then
+[Configuring Trickster](/docs/getting-started/configuring/). Running on
+Kubernetes? The [Kubernetes](/docs/kubernetes/) section covers deploying
+Trickster and using it as a Gateway API and Ingress controller.
 EOF
 
 # ---------------------------------------------------------------------------
@@ -297,6 +381,23 @@ done
 mkdir -p "${DOCS_DST}"
 rsync -a --delete "${RSYNC_EXCLUDES[@]}" "${STAGE}/" "${DOCS_DST}/"
 
+# ---------------------------------------------------------------------------
+# Record what was synced for the site templates. 'version' is only set for a
+# semantic version sync and is rendered next to the logo by
+# layouts/partials/navbar.html; it stays empty for branch syncs so a dev
+# build from main never claims to be a release.
+# ---------------------------------------------------------------------------
+SITE_VERSION=""
+[ -n "${VERSION}" ] && SITE_VERSION="${REF}"
+mkdir -p "$(dirname "${DATA_FILE}")"
+cat > "${DATA_FILE}" <<EOF
+# Generated by scripts/sync-docs.sh -- do not edit by hand (git-ignored).
+version = "${SITE_VERSION}"
+ref = "${REF}"
+repo = "${REPO_URL}"
+EOF
+
 echo ">> Synced ${count} pages from ${REPO_URL}@${REF}"
-echo ">>   docs   -> ${DOCS_DST#"${ROOT}"/}"
-echo ">>   images -> ${IMG_DST#"${ROOT}"/}"
+echo ">>   docs    -> ${DOCS_DST#"${ROOT}"/}"
+echo ">>   images  -> ${IMG_DST#"${ROOT}"/}"
+echo ">>   version -> ${DATA_FILE#"${ROOT}"/} (${SITE_VERSION:-none})"

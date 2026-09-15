@@ -1,7 +1,7 @@
 ---
 title: "Apache Arrow Flight SQL Listeners"
 linkTitle: "Flight SQL Listeners"
-weight: 50
+weight: 30
 ---
 
 Trickster can serve [Apache Arrow Flight SQL](https://arrow.apache.org/docs/format/FlightSql.html)
