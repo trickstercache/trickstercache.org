@@ -1,7 +1,7 @@
 ---
 title: "Observability"
 linkTitle: "Observability"
-weight: 80
+weight: 100
 description: >
   Metrics, logs, distributed tracing, and debugging Trickster's behavior.
 ---

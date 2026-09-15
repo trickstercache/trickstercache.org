@@ -1,7 +1,7 @@
 ---
 title: "Authenticator"
 linkTitle: "Authenticator"
-weight: 20
+weight: 30
 ---
 
 Trickster 2.x provides an Authenticator capability that allows you to protect Backends with an Authentication layer.

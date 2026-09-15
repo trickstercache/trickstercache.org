@@ -1,7 +1,7 @@
 ---
 title: "InfluxDB Support"
 linkTitle: "InfluxDB"
-weight: 20
+weight: 30
 ---
 
 Trickster provides support for accelerating InfluxDB queries that return time series data normally visualized on a dashboard. Acceleration works by using the Time Series Delta Proxy Cache to minimize the number and time range of queries to the upstream InfluxDB server.
@@ -13,6 +13,39 @@ Trickster is tested with the built-in [InfluxDB DataSource Plugin for Grafana](h
 Trickster uses InfluxDB-provided packages to parse and normalize queries for caching and acceleration. If you find query or response structures that are not yet supported, or providing inconsistent or unexpected results, we'd love for you to report those so we can further improve our InfluxDB support.
 
 Trickster supports integrations with InfluxDB 1.x, 2.x, and 3.x.
+
+### Prometheus Remote Read
+
+For InfluxDB 1.x, Trickster accelerates Prometheus remote-read requests sent to
+`POST /api/v1/prom/read`. Point Prometheus at the same endpoint on Trickster and
+retain the InfluxDB query parameters, for example:
+
+```yaml
+remote_read:
+  - url: http://trickster:8480/api/v1/prom/read?db=metrics&rp=autogen
+```
+
+The InfluxDB endpoint supports one query per request and the Prometheus
+`SAMPLES` response type. Trickster delta-caches requests with that shape. Other
+request shapes continue through the normal proxy path so that InfluxDB remains
+responsible for its response and error behavior.
+
+Raw remote-read samples do not advertise a guaranteed interval, so point-count
+sharding cannot split their extents without risking gaps. Requests use the
+normal proxy path when `shard_max_size_points` is enabled; time-based sharding
+remains supported. Cache retention (`oldest` and `lru`) and point-based backfill
+tolerance use a positive `hints.step_ms`; a request without that hint uses the
+normal proxy path, including Prometheus instant queries with a zero step hint.
+The hint is retained in serialized cache entries and does not change the 1 ms
+precision used to locate missing raw samples.
+
+Cacheable remote reads request Snappy directly from InfluxDB to avoid an extra
+HTTP compression layer. Reconstructed responses carry `Content-Encoding: snappy`
+on cache misses, partial hits, and full hits.
+
+The `db`, `rp`, `u`, and `p` query parameters and the `Authorization` header are
+part of the cache identity. They are forwarded unchanged unless a path-level
+request rewrite or header configuration overrides them.
 
 ## InfluxDB 3.x Support
 
@@ -65,7 +98,7 @@ InfluxDB 3.x ships with v1 and v2 compatibility endpoints. Trickster's existing 
 
 ### Flight SQL (gRPC)
 
-InfluxDB 3.x exposes SQL via Apache Arrow Flight SQL on gRPC in addition to HTTP. Grafana's InfluxDB datasource in SQL mode, the Python/Rust/Java SDKs, and ADBC all default to Flight SQL, so HTTP-only caching misses a significant fraction of real-world query traffic. The protocol-level (backend-agnostic) listener documentation lives in [Apache Arrow Flight SQL Listeners](/docs/time-series-caching/flight-sql/); this section covers the InfluxDB specifics.
+InfluxDB 3.x exposes SQL via Apache Arrow Flight SQL on gRPC in addition to HTTP. Grafana's InfluxDB datasource in SQL mode, the Python/Rust/Java SDKs, and ADBC all default to Flight SQL, so HTTP-only caching misses a significant fraction of real-world query traffic. The protocol-level (backend-agnostic) listener documentation lives in [Apache Arrow Flight SQL Listeners](/docs/listeners/flight-sql/); this section covers the InfluxDB specifics.
 
 Trickster can expose a Flight SQL server that proxies to an upstream Flight SQL endpoint and caches the Arrow IPC byte stream. Enable it by defining a listener with the `flight-sql` protocol and mapping exactly one InfluxDB backend to it (alongside its usual HTTP listener):
 

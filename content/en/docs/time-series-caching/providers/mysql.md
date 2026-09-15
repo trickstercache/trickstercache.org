@@ -1,7 +1,7 @@
 ---
 title: "MySQL Provider"
 linkTitle: "MySQL"
-weight: 50
+weight: 60
 ---
 
 Trickster can accept native MySQL client connections, proxy each authenticated

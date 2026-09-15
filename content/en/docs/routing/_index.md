@@ -1,7 +1,7 @@
 ---
 title: "Routing & Load Balancing"
 linkTitle: "Routing & Load Balancing"
-weight: 60
+weight: 70
 description: >
   Directing requests across multiple backends with the ALB, autodiscovery and Rule engine.
 ---

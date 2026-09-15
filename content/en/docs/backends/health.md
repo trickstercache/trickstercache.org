@@ -1,7 +1,7 @@
 ---
 title: "Health Checks"
 linkTitle: "Health Checks"
-weight: 40
+weight: 20
 ---
 
 ## Trickster Service Health - Ping Endpoint

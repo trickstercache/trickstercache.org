@@ -1,7 +1,7 @@
 ---
 title: "ClickHouse Support"
 linkTitle: "ClickHouse"
-weight: 30
+weight: 20
 ---
 
 Trickster will accelerate ClickHouse queries that return time series data normally visualized on a dashboard. Acceleration works by using the Time Series Delta Proxy Cache to minimize the number and time range of queries to the upstream ClickHouse server.
@@ -94,6 +94,8 @@ The Native listener supports SELECT queries, ping/pong, revision 54460 framing, 
 
 Supported native protocol data types: all integer types (8–256 bit), Float32/64, String, FixedString(N), DateTime, DateTime64, Date, Date32, UUID, IPv4, IPv6, Enum8/16, Bool, Nullable(T), Array(T), Map(K,V), Tuple(T1,T2,...), LowCardinality(T), and Decimal.
 
+Delta-cacheable query results are decoded into Trickster's dataset model and re-encoded in the client's requested format. Both the TSV and the `FORMAT Native` origin readers support every scalar type above, `Nullable(T)`, `LowCardinality(T)`, `Array(T)`, `Map(K, V)` and `Tuple(...)` (including named elements and nesting); compound values are carried in ClickHouse's text-literal form (`[1,'a']`, `{'k':1}`, `('a',1)`) and parsed back when re-encoding to Native. `Nested`, `Variant`, `Dynamic` and `JSON` columns are rejected with an explicit error on the delta path rather than decoded incorrectly; such queries should use a non-delta-cacheable shape.
+
 Native wire clients receive Native blocks. HTTP clients using a Native origin may request JSON, Native, CSV, or TSV-family output; compound columns in CSV/TSV and unsupported formats return an error. The modeler recognizes Native origin responses through the `X-ClickHouse-Format` response header, and HTTP Native framing honors `client_protocol_version`.
 
 Trickster parses incoming ClickHouse statements into a full abstract syntax tree using the [AfterShip ClickHouse SQL parser](https://github.com/AfterShip/clickhouse-sql-parser), then applies its own semantic analysis to determine whether a query is eligible for time series delta caching and, if so, its timestamp column, bucket cadence, time range, grouping tags, and cache identity. The cache key is derived from a canonical form of the query in which the requested time range is replaced with placeholders, so requests for different time ranges of the same logical series share one delta cache entry.
@@ -152,7 +154,7 @@ Time range predicates must appear in a top-level `AND` conjunction of the `WHERE
 
 Two predicate targets are supported, with different rules:
 
-- **The raw time column** (the column inside the bucket function): the lower bound must be inclusive (`>=`) and the upper bound exclusive (`<`), and both values must fall exactly on bucket boundaries. Other comparators — including `BETWEEN` — describe partial buckets whose aggregates cannot be safely cached, so those queries are served through the OPC.
+- **The raw time column** (the column inside the bucket function): the lower bound must be inclusive (`>=`) and the upper bound exclusive (`<`). Values that do not fall on bucket boundaries — such as the live ranges produced by Grafana's `$__fromTime` and `$__toTime` macros — are rounded inward to the nearest complete bucket (lower bound up, upper bound down), so partial edge buckets are omitted from the response rather than cached as complete aggregates. If no complete bucket remains after rounding, the query is served through the OPC. Other comparators — including `BETWEEN` — describe partial buckets whose aggregates cannot be safely cached, so those queries are served through the OPC.
 - **The bucket alias** (the output of the bucket expression): `>`, `>=`, `<`, `<=`, and `BETWEEN` are all supported, because bucket outputs are discrete; Trickster normalizes each comparator to the first and last included bucket.
 
 Bound values may be expressed as epoch integers, ClickHouse string dates in the form `2006-01-02 15:04:05` (or date-only, or RFC3339), `toDateTime(n)`, `toDateTime64(n, precision)`, or `toDate(n)` wrappers, `WITH`-clause constants, or `now()`/`now64()` with optional addition or subtraction of seconds. DateTime64 precision is retained. Floating epoch bounds and timezone-qualified conversions such as `toDateTime(n, 'America/Denver')` are not eligible.

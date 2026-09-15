@@ -7,7 +7,7 @@
 
 .td-navbar .navbar-brand {
     display: flex;
-    align-items: center;
+    align-items: flex-end; // bottom-aligns the version label with the logo
     max-width: none;
 }
 
@@ -15,6 +15,18 @@
     display: inline-block;
     height: 30px;
     width: auto;
+}
+
+// Docs version label (see layouts/partials/navbar.html)
+.td-navbar .navbar-brand .navbar-version {
+    margin-left: .5rem;
+    padding-bottom: .125rem;
+    font-size: .8rem;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: .02em;
+    color: $readable-gray;
+    white-space: nowrap;
 }
 
 .td-navbar .navbar-github-link {

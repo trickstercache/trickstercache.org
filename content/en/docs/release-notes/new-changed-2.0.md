@@ -1,7 +1,7 @@
 ---
 title: "Trickster 2.0"
 linkTitle: "What's New in 2.0"
-weight: 30
+weight: 20
 ---
 
 ## An All-New Bag of Tricks

@@ -23,7 +23,7 @@ All settings and functions configured for a Backend are applicable to traffic ro
 
 In Trickster configuration files, each ALB itself is a Backend, just like the pool members to which it routes. This makes it possible to configure infinite loops (e.g., where ALB1 has ALB2 in its pool, and ALB2 has ALB1 in its pool). However, at startup Trickster will validate ALB configurations by following all ALBs' possible paths, and exit with a startup failure if any infinite loops are detected.
 
-In addition to (or instead of) a static pool list, an ALB's pool membership can be discovered and kept current automatically at runtime — from Kubernetes, DNS records, or a watched member-list file. See [ALB Autodiscovery](/docs/routing/alb-autodiscovery/).
+In addition to (or instead of) a static pool list, an ALB's pool membership can be discovered and kept current automatically at runtime — from Kubernetes, the AWS, Google Cloud and Azure APIs, the Docker Engine, the Consul or Nomad service registries, DNS records, an HTTP endpoint, or a watched member-list file. See [ALB Autodiscovery](/docs/routing/alb-autodiscovery/).
 
 ## Mechanisms Deep Dive
 
@@ -118,7 +118,7 @@ For request paths that are not mergeable by the configured time series provider,
 
 Within each configured replica group, TSM deduplicates values when merging series with identical labels — for each timestamp, only one replica value is kept. Across different groups it uses the query's merge strategy.
 
-For Federation use cases where backends hold different, non-overlapping data, Trickster **automatically selects a merge strategy per query** by inspecting the outermost PromQL aggregation operator. No configuration is required. This is particularly important for PromQL aggregation queries like `sum()` or `avg()`, which strip labels from results and cause series from different backends to appear identical.
+For Federation use cases where backends hold different, non-overlapping data, Trickster **automatically selects a merge strategy per query** by parsing it with the upstream Prometheus PromQL parser and inspecting the outermost aggregation operator. No configuration is required. Because selection uses the parsed expression, redundant parentheses, comments, whitespace, keyword case, and `by`/`without` placement do not change the selected strategy. This is particularly important for PromQL aggregation queries like `sum()` or `avg()`, which strip labels from results and cause series from different backends to appear identical.
 
 | Outer Operator | Trickster Merge Behavior |
 |----------------|--------------------------|
@@ -134,9 +134,14 @@ For Federation use cases where backends hold different, non-overlapping data, Tr
 | `quantile` | Query the inner expression, merge all float samples globally, then calculate the exact quantile per timestamp and aggregation group |
 | `limit_ratio` | Apply Prometheus-compatible label-hash sampling, globally finalizing a supported inner aggregation when necessary |
 | `limitk` | Query the inner expression, merge it globally, then retain the first k samples in stable TSM series order per timestamp and aggregation group |
+| `sum`, `count`, or `count_values` followed by `or vector(0)` | Sum of values per unique label set + timestamp |
 | _(none)_ | Deduplicate (default) |
 
 For `avg` queries, Trickster issues two concurrent sub-queries per backend shard — one rewriting the outer `avg` to `sum` and another to `count` — then computes a true weighted arithmetic mean (`sum_total / count_total`) per series per timestamp. This avoids the skew introduced by a naïve avg-of-averages when backends have different data cardinalities.
+
+When an outer aggregation's input contains a nested aggregation, binary expression, or function that needs globally complete input, Trickster retains the aggregation's established merge strategy and adds a warning. This fail-open behavior preserves correct results when the input series are colocated while noting that results can be inaccurate when matching series are split across shards.
+
+For `sum`, `count`, or `count_values` followed by `or vector(0)`, Trickster sends the complete expression to each backend and sums the results, because a backend without matching series contributes only the explicit zero. This requires an aggregation input that each backend can evaluate independently: no nested aggregation, binary expression, or function that needs globally complete input. When the `or` uses `on(...)` or `ignoring(...)` label matching, this applies only to `sum` or `count` without `by` or `without` grouping; other forms use the warning fallback described below.
 
 For `topk` and `bottomk`, Trickster sends the inner expression to each backend, merges those inner results using the inner expression's merge strategy, then applies the final rank-and-trim step per timestamp and aggregation group. This prevents each backend's local `topk`/`bottomk` result from being weighted equally during the merge. If the inner expression is `avg`, Trickster still uses the weighted `sum`/`count` rewrite before applying the final rank. This also applies when the rank aggregation is wrapped in `sort()` or `sort_desc()`.
 
@@ -151,6 +156,8 @@ For `limitk`, Trickster reproduces the current Prometheus evaluator's first-visi
 Prometheus does not define a canonical storage visitation order for `limitk`. A separate Prometheus deployment whose storage returns the same series in a different order may therefore select different labels. Trickster guarantees the requested cardinality, grouping, and repeatability for the same merged input, and fanout completion order does not affect the result. `limitk` remains an experimental PromQL operator, so this compatibility contract may change with Prometheus.
 
 For an unsupported inner expression, Trickster retains the established per-shard fallback and injects a `warnings` entry in the Prometheus response body to alert the caller that results may be inaccurate.
+
+The same deduplicating fallback and warning apply when an aggregation is not the query's outermost operation (for example, `histogram_quantile(0.9, sum by (le) (rate(x_bucket[5m])))`), when an aggregation is combined with a binary expression other than the supported `or vector(0)` form, and when the query cannot be parsed as PromQL, such as a query that uses another dialect's extensions.
 
 When a non-dedup strategy is in effect and backends have [injected labels](/docs/time-series-caching/providers/prometheus/#injecting-labels) configured, those labels are automatically stripped before merging. This ensures series from different backends hash identically for aggregation, and the injected labels do not appear in the response.
 
