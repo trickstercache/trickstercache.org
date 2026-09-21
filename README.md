@@ -1,4 +1,4 @@
-# trickstercache.org
+# <img src="./static/branding/logos/trickster-logo.svg" width=54 />  trickstercache.org
 
 This repository contains the documentation site for Trickster, available at <https://trickstercache.org>.
 
@@ -38,8 +38,14 @@ button in the GitHub Actions tab.
 ### One-time setup
 
 - Add two repository secrets under GitHub **Settings → Secrets and variables → Actions**:
-  `NETLIFY_AUTH_TOKEN` (a Netlify personal access token) and `NETLIFY_SITE_ID` (the
-  site's *Site ID* from Netlify **Site configuration → General → Site details**).
+  - `NETLIFY_AUTH_TOKEN`: a Netlify personal access token, created from your avatar menu
+    under **User settings → Applications → Personal access tokens → New access token**.
+    The token is shown only once and must have an expiration, so rotate this secret
+    before it expires.
+  - `NETLIFY_SITE_ID`: the **Project ID** from the Netlify project's
+    **Project configuration → General → Project details → Project information**.
+    Netlify renamed sites to projects, but this is the same value the CLI and API call
+    the site ID.
 - `netlify.toml` tells Netlify to skip its own git-triggered production builds (its
   `ignore` command exits 0 when Netlify's `CONTEXT` is `production`), so pushes to
   `main` no longer publish anything while deploy previews for pull requests keep
