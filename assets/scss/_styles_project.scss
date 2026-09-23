@@ -1,6 +1,9 @@
 // Trickster overrides
 
-.td-navbar .td-search-input {
+@use 'sass:color';
+@use 'td/support/fa';
+
+.td-navbar .td-search__input {
     background: #fff;
     border: 1px #ddd solid;
 }
@@ -8,6 +11,7 @@
 .td-navbar .navbar-brand {
     display: flex;
     align-items: flex-end; // bottom-aligns the version label with the logo
+    gap: 0;
     max-width: none;
 }
 
@@ -17,7 +21,7 @@
     width: auto;
 }
 
-// Docs version label (see layouts/partials/navbar.html)
+// Docs version label (see layouts/_partials/navbar.html)
 .td-navbar .navbar-brand .navbar-version {
     margin-left: .5rem;
     padding-bottom: .125rem;
@@ -34,13 +38,11 @@
     line-height: 1;
 }
 
-.mr-4, .mx-4{
-    margin-right: .75rem !important;
-}
+.td-navbar .nav-item {
+    margin-right: .75rem;
 
-@media only screen and (min-width: 992px) {
-    .mr-4, .mx-4{
-        margin-right: 1.5rem !important;
+    @include media-breakpoint-up(lg) {
+        margin-right: 1.5rem;
     }
 }
 
@@ -73,18 +75,11 @@
 
 .td-main #td-cover-block-0 {
     background: rgb(51,102,153);
+    color: $white;
 }
 
 .td-overlay--dark::after {
     background-color: transparent;
-}
-
-.td-navbar-cover {
-    background: $primary !important;
-}
-
-.td-navbar-cover .nav-link {
-    text-shadow: none;
 }
 
 .td-box--5 {
@@ -124,6 +119,12 @@
     }
 }
 
+// Foldable sections (params.ui.sidebar_menu_foldable): use a chevron instead
+// of Docsy's solid caret. Docsy rotates it to point down when expanded.
+nav.foldable-nav .ul-1 .with-child > label::before {
+    content: fa.fa-content(fa.$var-angle-right);
+}
+
 // Right nav
 
 .td-toc #TableOfContents {
@@ -134,14 +135,6 @@
             text-decoration: none;
         }
     }
-}
-
-a {
-    color: $trickster-blue;
-}
-
-.main a {
-    color: $trickster-dark-blue;
 }
 
 // override default to reach an accessible contrast ratio
@@ -157,7 +150,7 @@ a {
 }
 
 .pageinfo-primary {
-    border-color: $trickster-light-blue;    
+    border-color: $trickster-light-blue;
 }
 
 // remove extraneaous horizontal rule that causes a double line on some pages above feedback section
@@ -171,13 +164,24 @@ a {
     margin-top: 1rem;
 }
 
-footer {
+.td-footer {
     min-height: fit-content;
     a {
-        color: lighten($trickster-light-blue, 35%);
+        color: color.adjust($trickster-light-blue, $lightness: 35%);
         &:hover {
-            color: lighten($secondary, 30%);
+            color: color.adjust($secondary, $lightness: 30%);
         }
+    }
+
+    // The copyright notice (layouts/_partials/footer/center.html) spans the
+    // full width below the link columns.
+    .td-footer__left,
+    .td-footer__right {
+        @include make-col(6);
+    }
+    .td-footer__center {
+        @include make-col(12);
+        order: 4 !important; // beats the Bootstrap order-sm-* utility
     }
 }
 
@@ -205,7 +209,7 @@ li .fab {
 
 // 404 page styles
 
-.td-404 main {
+.td-404 .td-main {
     max-width: 1000px;
     margin: auto;
     #title {
@@ -215,4 +219,3 @@ li .fab {
         padding-bottom: 2rem;
     }
 }
-

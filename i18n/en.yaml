@@ -1,0 +1,9 @@
+# Overrides of Docsy's English UI strings.
+
+community_introduce: >-
+  {{ .Site.Title }} is an open source project that anyone in the community can
+  use, improve, and enjoy. We'd love you to join us! Here are a few ways to find
+  out what's happening and get involved.
+# Rendered before a link to the community page's `contributingUrl`.
+community_how_to: You can find out how to contribute to these docs on the
+community_guideline: documentation repository on GitHub

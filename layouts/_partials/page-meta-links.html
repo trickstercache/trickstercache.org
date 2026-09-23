@@ -1,0 +1,10 @@
+{{/* Override Docsy's GitHub edit/issue links. Docs content is synced from
+     the trickster repo (see scripts/sync-docs.sh), so PRs against this repo's
+     page files would be overwritten. Keep only the print-section link. */ -}}
+{{ if .File -}}
+{{ with .CurrentSection.AlternativeOutputFormats.Get "print" -}}
+<div class="td-page-meta ms-2 pb-1 pt-2 mb-0">
+  <a id="print" href="{{ .RelPermalink }}"><i class="fa-solid fa-print"></i> {{ T "print_entire_section" }}</a>
+</div>
+{{ end -}}
+{{ end -}}

@@ -66,51 +66,42 @@ label.
 
 ## Finding files to edit
 
-The Trickster documentation site uses Hugo with the Docsy theme. For more detailed information on the site infrastructure, see the [Hugo](https://gohugo.io/documentation/) and [Docsy](https://www.docsy.dev/docs/) documentation.
+The Trickster documentation site uses Hugo with the [Docsy](https://www.docsy.dev) theme, which is installed from npm as [`@docsy/theme`](https://www.npmjs.com/package/@docsy/theme) (see `package.json`). For more detailed information on the site infrastructure, see the [Hugo](https://gohugo.io/documentation/) and [Docsy](https://www.docsy.dev/docs/) documentation.
+
+Site-specific templates live in `layouts/` and override Docsy's files of the same path. UI string overrides live in `i18n/en.yaml`.
 
 ### Editing styles
 
 To override styles, edit the SCSS files in the [assets/scss](https://github.com/trickstercache/trickstercache.org/tree/main/assets/scss) directory. Use these two files as follows:
 
 - `_styles_project.scss`: edit this file to override Docsy styles or change the current styles.
-- `_variables_project.scss`: declare SCSS variables in this file that you can use elsewhere.
+- `_variables_project.scss`: declare SCSS variables in this file that you can use elsewhere, and override Docsy and Bootstrap 5 variables.
 
-## Using the documentation site locally 
+### Updating Docsy
 
-### Prerequisite
+Update the pinned version in `package.json` (for example with `npm install --save-dev @docsy/theme@X.Y.Z`), then review the Docsy [changelog](https://www.docsy.dev/project/about/changelog/) for changes to the files overridden in `layouts/`.
 
-To build and run the site locally, you must have a recent `extended` version of [Hugo](https://gohugo.io).
-For more information on configuring your environment, see the Docsy
-[Getting started](https://www.docsy.dev/docs/getting-started/#prerequisites-and-installation) guide. If you don't want to run the site locally, you can check the preview when you submit your PR.
+## Using the documentation site locally
+
+### Prerequisites
+
+- [Hugo](https://gohugo.io/installation/), `extended` edition, at the version set by `HUGO_VERSION` in `netlify.toml` (Docsy requires 0.160.1 or later)
+- [Node.js](https://nodejs.org/) 24 or later, with npm
+
+The npm dependencies include the Dart Sass compiler that Hugo uses to build the site's styles. The `make` targets put it on Hugo's `PATH`, so run Hugo through them (or through `npm run hugo -- ARGS`).
 
 ### Running the website locally
 
 1. At the command line, within the Trickster documentation root directory, run the following command:
 
    ```
-   hugo serve
+   make serve
    ```
 
-1. Open your web browser and type `http://localhost:1313` in your navigation bar,
-   This opens a local instance of the docsy-example homepage. You can now make
-   changes to the docsy example and those changes will immediately show up in your
-   browser after you save.
+   This installs the npm dependencies (`npm ci`) when needed, then starts `hugo server`.
 
-
-#### Troubleshooting
-
-In you experience the following error, you need the extended version of Hugo:
-
-```
-➜ hugo server
-
-INFO 2021/01/21 21:07:55 Using config file: 
-Building sites … INFO 2021/01/21 21:07:55 syncing static files to /
-Built in 288 ms
-Error: Error building site: TOCSS: failed to transform "scss/main.scss" (text/x-scss): resource "scss/scss/main.scss_9fadf33d895a46083cdd64396b57ef68" not found in file cache
-```
-
-See the Docsy [user guide](https://www.docsy.dev/docs/getting-started/) for details on how to install Hugo.
+1. Open your web browser and type `http://localhost:1313` in your navigation bar.
+   Changes you make to the site will immediately show up in your browser after you save.
 
 ## License
 

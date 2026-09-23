@@ -9,7 +9,8 @@ command = "make production-build"
 ignore = 'test "$CONTEXT" = "production"'
 
 [build.environment]
-HUGO_VERSION = "0.165.0"
+HUGO_VERSION = "0.166.0"
+NODE_VERSION = "24"
 
 [context.deploy-preview]
 command = "make preview-build"

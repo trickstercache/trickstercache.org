@@ -17,7 +17,7 @@ Possibly add more detailed info on the projects goals in terms of community/impr
 {{% /blocks/lead %}}
 
 
-{{< blocks/section >}}
+{{< blocks/section type="row" >}}
 <div class="col-12">
 <h1 class="text-center">We could add pics here of key contributors.</h1>
 </div>
@@ -25,7 +25,7 @@ Possibly add more detailed info on the projects goals in terms of community/impr
 {{< /blocks/section >}}
 
 
-{{< blocks/section >}}
+{{< blocks/section type="row" >}}
 
 <div class="col-12">
 <h1 class="text-center">This is another section</h1>

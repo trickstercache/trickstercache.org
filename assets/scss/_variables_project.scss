@@ -4,20 +4,53 @@ Add styles or override variables from the theme here.
 
 */
 
+@use 'sass:color';
+
 $trickster-blue: #369;
-$trickster-light-blue: lighten($trickster-blue, 10%);
-$trickster-dark-blue: darken($trickster-blue, 10%);
+$trickster-light-blue: color.adjust($trickster-blue, $lightness: 10%);
+$trickster-dark-blue: color.adjust($trickster-blue, $lightness: -10%);
 
 $primary: #fafafa;
 $secondary: $trickster-dark-blue;
 
 $readable-gray: #444;
-$info: lighten(#C0E0DE, 5%);
+$info: color.adjust(#C0E0DE, $lightness: 5%);
+
+// Remaining theme colors from the Docsy 0.x palette this site was designed
+// against (Docsy now defaults to Bootstrap's palette).
+
+$success: #3772FF;
+$warning: #ED6A5A;
+$danger: #ED6A5A;
+$light: #D3F3EE;
+$dark: #403F4C;
+$blue: #72A1E5;
+$orange: #BA5A31;
+$gray-200: #eee;
+$gray-400: #ccc;
+$gray-600: #888;
+$gray-800: #333;
+$gray-900: #222;
+
+$link-color: $trickster-blue;
+$link-decoration: none;
+$link-hover-decoration: none;
 
 
 // Navbar
 
-$navbar-dark-color: $readable-gray !default;
-$navbar-dark-hover-color: $secondary !default;
-$navbar-dark-active-color: $trickster-blue !default;
-$navbar-dark-disabled-color: #6c6b6a !default;
+$td-navbar-bg-color: $primary;
+$navbar-light-color: $readable-gray;
+$navbar-light-hover-color: $secondary;
+$navbar-light-active-color: $trickster-blue;
+$navbar-light-disabled-color: #6c6b6a;
+
+
+// Typography, gradients, shadows and buttons (Docsy 0.x defaults)
+
+$td-enable-google-fonts: true;
+$enable-gradients: true;
+$enable-shadows: true;
+$btn-border-radius: 1rem;
+$btn-border-radius-sm: 1rem;
+$btn-border-radius-lg: 2rem;
