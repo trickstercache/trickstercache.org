@@ -1,24 +1,20 @@
 {
-  "name": "tech-doc-hugo",
-  "version": "0.0.1",
-  "description": "Hugo theme for technical documentation.",
-  "main": "none.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "name": "trickstercache.org",
+  "private": true,
+  "description": "Documentation website for Trickster",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/google/docsy-example.git"
+    "url": "git+https://github.com/trickstercache/trickstercache.org.git"
   },
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/google/docsy-example/issues"
+  "license": "Apache-2.0",
+  "scripts": {
+    "hugo": "hugo"
   },
-  "homepage": "https://github.com/google/docsy-example#readme",
-  "dependencies": {},
   "devDependencies": {
-    "autoprefixer": "^9.8.6",
-    "postcss-cli": "^7.1.2"
+    "@docsy/theme": "0.17.0",
+    "sass-embedded": "1.105.0"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }

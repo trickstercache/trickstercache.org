@@ -6,9 +6,8 @@ site/
 node_modules
 .vscode/
 
-# Ignore npm/yarn debug log
+# Ignore npm debug log
 npm-debug.log
-yarn-error.log
 
 public/*
 .hugo_build.lock

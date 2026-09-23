@@ -1,5 +1,6 @@
 ---
 title: Community
+contributingUrl: https://github.com/trickstercache/trickstercache.org
 menu:
   main:
     weight: 40
