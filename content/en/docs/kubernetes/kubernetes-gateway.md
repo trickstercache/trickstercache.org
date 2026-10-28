@@ -58,6 +58,8 @@ data:
   negative_cache_name: api-errors
   timeout: 45s
   authenticator_name: gateway-auth
+  ip_acl_name: office
+  rate_limiter_name: per-client
 ```
 
 | Key | Value |
@@ -65,8 +67,22 @@ data:
 | `routing_mode` | `service` or `endpoint` |
 | `cache_name`, `negative_cache_name` | a configured cache or negative cache |
 | `tracing_name`, `req_rewriter_name`, `authenticator_name` | a configured tracer, request rewriter or authenticator |
+| `geo_acl_name` | a configured [geo ACL](/docs/security/geo-acl/), which gates the backend each of the class's routes attaches, and none of its pool members, templates or mirror targets. A stream route needs one whose locator places addresses; under a geo ACL that reads headers, the class's stream routes are refused rather than served ungated |
+| `ip_acl_name` | a configured access list with `source: client_ip` and `action: reject`. When set, it overrides `kubernetes.defaults.ip_acl_name` for this class's route backends. See [ip-acl.md](/docs/security/ip-acl/) |
+| `rate_limiter_name` | a configured rate limiter with HTTP keys, unit `requests` or unset, and an action other than `close`. When set, it overrides `kubernetes.defaults.rate_limiter_name` for this class's HTTP and gRPC route backends. A stream route does not take it. See [rate-limiting.md](/docs/security/rate-limiting/) |
 | `timeout` | a duration with a unit, such as `30s` |
 | `health_mode` | `probe` or `provider`, for generated discovery-backed ALBs |
+| `load_balancing` | `rr`, `p2c`, `lc`, `lt` or `hrw`: how traffic is spread across a Service's endpoints in the endpoint routing mode |
+| `load_balancing_key` | what `hrw` keeps on one endpoint: `client_ip`, or `sni` on a TLSRoute; an HTTP route may also use `host`, `header:<name>`, `cookie:<name>` or `query:<name>` |
+| `sticky` | `cookie`, `header`, `table` or `none`: keeps a client on the endpoint it first reached, on an HTTP route in the endpoint routing mode, and in a table on a stream route; see [Session persistence](#session-persistence) |
+| `sticky_key` | what `table` mode keeps a client's endpoint by, from the `load_balancing_key` vocabulary; `client_ip` unless set, or when the route's listener cannot read it |
+| `sticky_ttl`, `sticky_idle` | a duration of at least `1s`: a session ends that long after it began (`1h` unless set), or once unused that long. A route's `sessionPersistence` does not use them |
+| `sticky_secret` | the name of a Secret, in the ConfigMap's namespace and labeled `trickstercache.org/sticky-key`, whose `key` entry keys every session token the class's ALBs issue; see [The session key](#the-session-key) |
+| `http3` | `true` or `false`: whether the class's `HTTPS` listeners also serve HTTP/3, on the same port number over UDP, which WebTransport sessions need; `kubernetes.defaults.http3` when unset, which is `true` unless set. Gateways of several classes sharing a port take the oldest Gateway's setting, and the others are told by Event |
+
+A non-empty `ip_acl_name` is copied onto the generated HTTP, gRPC, stream, and MoQ route backends, in both the `service` and `endpoint` routing modes. It is not copied onto pool members, endpoint templates, or mirrors. An empty value leaves `kubernetes.defaults.ip_acl_name` in place. No route or policy field sets the name to `none`. A name that is not configured, or a list that is not `client_ip` and `reject`, cannot be honored: the class is not served, as for any other parameter that names something the configuration does not define.
+
+A non-empty `rate_limiter_name` is copied onto the generated HTTP and gRPC route backends, in both routing modes. It is not copied onto stream route backends, pool members, endpoint templates, mirrors, or generated listeners. An empty value leaves `kubernetes.defaults.rate_limiter_name` in place. No route or policy field sets the name to `none`. A name that is not configured, or a limiter a generated HTTP route cannot use, cannot be honored: that class is not served. Another class keeps the parameters it can honor.
 
 Unlike an Ingress annotation, a GatewayClass may set the operator-tier names,
 because a GatewayClass is cluster-scoped infrastructure and whoever can write
@@ -89,12 +105,18 @@ with no keys is a class with no overrides, and is served.
 Each Gateway listener becomes a Trickster listener bound to the declared
 port. `HTTP` opens a plaintext port; `HTTPS` opens a TLS port with
 `tls_runtime_certs`, whose certificates arrive from the referenced Secrets at
-runtime; `TCP`, `TLS` and `UDP` open a [stream listener](/docs/getting-started/configuring/#stream-listeners)
-of the matching protocol, which relays what it receives without reading it.
+runtime, and serves [HTTP/3](/docs/listeners/http3/) on the same port number over UDP
+unless the class's `http3` parameter turns it off; `TCP`, `TLS` and `UDP` open a
+[stream listener](/docs/getting-started/configuring/#stream-listeners) of the matching protocol,
+which relays what it receives without reading it; and the implementation-specific
+`trickstercache.org/moq` opens a MoQ listener (see [MoQ relays](#moq-relays)).
 Listeners on one port — within a Gateway or across Gateways — merge onto one
 Trickster listener, because a port can be bound once; a `UDP` listener binds
 in its own port space, so it may share a port number with a `TCP`, `TLS`,
-`HTTP` or `HTTPS` listener. Two listeners on one port must serve one
+`HTTP` or `HTTPS` listener. A `trickstercache.org/moq` listener binds UDP too,
+so it may not share a port with a `UDP` listener, while it shares one socket
+with the HTTP/3 side of an `HTTPS` listener on the same number, each QUIC
+connection dispatched by the protocol it negotiates. Two listeners on one port must serve one
 protocol; where they do not, the listener of the older Gateway (then the
 earlier listener) keeps the port and the other is reported and not served.
 Listeners of different Gateways on one port may share a hostname, or have
@@ -121,9 +143,10 @@ refuses before it reaches the controller.
 below. A `TCP` or `UDP` listener cannot carry one, since nothing in the
 stream names a host; a listener that declares one is refused with
 `UnsupportedValue`. A `TLS` listener's hostname is matched against the server
-name a client offers.
+name a client offers, and a `trickstercache.org/moq` listener's against the
+authority a session names.
 
-On an `HTTPS` listener `tls.mode` must be `Terminate` (the default). Every
+On an `HTTPS` or `trickstercache.org/moq` listener `tls.mode` must be `Terminate` (the default). Every
 `certificateRefs` entry must name a `kubernetes.io/tls` Secret, in the
 Gateway's namespace or in one whose ReferenceGrant permits it. A listener
 that cannot terminate TLS at all — no `tls` block, no `certificateRefs`, or
@@ -146,7 +169,7 @@ TCP is not served in this release.
 `Selector` against the labels of the route's Namespace. `allowedRoutes.kinds`
 may list the kinds the listener's protocol carries: `HTTPRoute` and
 `GRPCRoute` on `HTTP` and `HTTPS`, `TCPRoute` on `TCP`, `TLSRoute` on `TLS`
-and `UDPRoute` on `UDP`. Any other kind is reported as unsupported on the
+and `UDPRoute` on `UDP` and `trickstercache.org/moq`. Any other kind is reported as unsupported on the
 listener, and a listener admitting no supported kind admits no route.
 
 **Deviation:** `allowedRoutes` decides which routes attach to a listener; it
@@ -400,8 +423,170 @@ repeats an idempotent request after a connection failure and after a
 response whose status is in `codes`, `attempts` times (once when unset, at
 most ten), waiting `backoff` between attempts. The Gateway API defines no
 retry budget, so every eligible request is retried. A value the data plane
-cannot express makes the route not served, and `sessionPersistence` is
-reported and ignored.
+cannot express makes the route not served. A rule's `sessionPersistence` is
+described next.
+
+## Session persistence
+
+A rule's `sessionPersistence` keeps a client on the backend it first reached,
+on the ALB that serves the rule, as [Sticky Sessions](/docs/routing/alb/#sticky-sessions)
+describes. The client carries a signed token naming its backend, in a cookie
+or a request header, so any replica holding the same key honors it.
+
+| Field | Lowered to |
+|---|---|
+| `type: Cookie` (the default) | `sticky.mode: cookie` |
+| `type: Header` | `sticky.mode: header`: the token is issued in a response header, and the client sends it back in a request header of the same name |
+| `sessionName` | the cookie's or header's name |
+| `absoluteTimeout` | `sticky.ttl`; unset, a session has no absolute limit. A limit under one second is kept as one second, since a token keeps whole seconds |
+| `cookieConfig.lifetimeType: Session` (the default) | `sticky.cookie.lifetime: session`: the cookie has no `Max-Age` and ends with the browser session, while `absoluteTimeout` still ends the token |
+| `cookieConfig.lifetimeType: Permanent` | the cookie's `Max-Age` ends with the token |
+
+The Gateway API version this build reads has no idle timeout for a route's
+session, and the class's `sticky_ttl` and `sticky_idle` parameters do not
+apply to one.
+
+Where the session is kept depends on the rule's backendRefs and the routing
+mode:
+
+- **Several backendRefs.** The rule's round-robin ALB keeps the session, and
+  its token names the Service. In the endpoint routing mode it also names the
+  endpoint within that Service, so a session stays on one pod. In the
+  `service` routing mode kube-proxy chooses the endpoint, so a session stays
+  on its Service only; the controller reports this for the rule.
+- **One backendRef.** Only the endpoint routing mode has an ALB between the
+  rule and the Service's pods, and that ALB keeps the session. In the
+  `service` routing mode the rule is served without a session, and the
+  controller reports it.
+
+An unnamed cookie is named for the ALB that sets it,
+`trickster_sticky_<hash>`, where the hash is 12 hex digits of the ALB's
+name, since ALBs that serve one host must not share a cookie. A generated
+ALB is named for its route and its place among the route's rules, for each
+of the route's hostnames and listener ports, so renaming the route, or
+adding a rule, hostname or port ahead of it, renames the cookie and starts
+its sessions over. An unnamed header is `X-Trickster-Session`. A
+`sessionName` beginning `__Host-` or `__Secure-` makes the cookie always
+`Secure`, as a browser requires, so it works only over HTTPS.
+
+A named cookie is set by one generated ALB per host. A browser sends a
+host's cookies to every port and scheme it serves, and each rule and each
+listener port has an ALB of its own, whose tokens the others do not honor,
+so this holds across every rule and every listener, HTTP and HTTPS alike.
+When two rules set the same `sessionName` for a host they both serve, the
+older route keeps it (within one route, the earlier rule), and the other is
+served without a session and told why. A rule served on two ports for one
+host, such as a route attached to both an HTTP and an HTTPS listener, keeps
+a named session on only one of them; leave `sessionName` unset there, so
+that each port's ALB names a cookie of its own. A route served under
+several hostnames uses its name once per host, which is allowed. A
+`sessionPersistence` value that cannot be expressed is reported, and the
+rule is served without a session.
+
+Each of these problems is reported as a `Warning` Event with the reason
+`Rejected` on the route, or on the XBackendTrafficPolicy; the route's
+`Accepted` condition does not change, since the rule is still served.
+
+A GRPCRoute rule's `sessionPersistence` is lowered the same way. gRPC
+clients rarely keep cookies, so give a GRPCRoute `type: Header`, and have
+the client send back the header's value as request metadata.
+
+The token travels upstream with the request, and is added to the response
+outside any cache, so it is never part of a cached object. Generated ALBs do
+not mark a response that sets the cookie `private`, so a shared cache in
+front of Trickster may store it and hand the cookie to other clients; see
+[Sticky Sessions and Caching](/docs/routing/alb/#sticky-sessions-and-caching). In front
+of cacheable content prefer `table` mode, which `sessionPersistence` cannot
+ask for: leave the rule without one, and set `sticky: table` in a
+TricksterCachePolicy or the class parameters. That keeps each client on its
+endpoint within a Service in the endpoint routing mode, with the key and
+replica limits that section describes.
+
+### The session key
+
+Every replica must key tokens alike, or each refuses the others' tokens. A
+GatewayClass names the key's Secret with its `sticky_secret` parameter:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cached-gateway-params
+  namespace: trickster
+data:
+  sticky_secret: trickster-sticky-key
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: trickster-sticky-key
+  namespace: trickster
+  labels:
+    trickstercache.org/sticky-key: ""
+type: Opaque
+stringData:
+  key: <at least 32 random bytes>
+```
+
+The Secret must be in the parameters ConfigMap's namespace. A
+`namespace/name` value is an invalid parameter, so the class is not served
+(`InvalidParameters`) until it is fixed. It must
+carry the `trickstercache.org/sticky-key` label, since the controller watches
+only labeled Secrets beside TLS ones. Its `key` entry must hold at least 32
+bytes. Every replica reads the same Secret, so every replica keys tokens
+alike. A change to it reaches the ALBs without a restart. Replacing the key
+starts every session over once, since tokens made with the old key are no
+longer honored. A Secret that is missing, unlabeled or too short is reported
+on the GatewayClass (`InvalidParameters`), which is still served, and until it
+is fixed its ALBs key their tokens with `kubernetes.defaults.sticky_secret_file`
+when that is set, and per process otherwise. The label is the same text as
+the `trickstercache.org/sticky-key` Ingress annotation, but it is a label on
+the Secret, not an annotation on a route. The key is kept in memory. The configuration view
+redacts it, and it is never logged.
+
+Without a class Secret, tokens are keyed with the file that
+`kubernetes.defaults.sticky_secret_file` names, which is how an Ingress-only
+deployment configures it. Mount the file from a Secret at the same path on
+every replica:
+
+```yaml
+kubernetes:
+  defaults:
+    routing_mode: endpoint
+    sticky_secret_file: /etc/trickster/sticky/key
+```
+
+The file must exist and hold at least 32 bytes, after trailing line breaks,
+or the configuration is refused. It is read when the configuration loads, so
+a rotated file takes effect at the next configuration reload.
+
+With neither set, each process keys its tokens with a random key of its own.
+A replica then refuses the others' tokens and moves the session, and a
+restart ends every session. That suits a single replica only, and Trickster
+logs a warning for each ALB that issues tokens with such a key.
+
+### XBackendTrafficPolicy
+
+Where the cluster serves the experimental
+`gateway.networking.x-k8s.io/v1alpha1` `XBackendTrafficPolicy`, its
+`sessionPersistence` applies to every HTTPRoute and GRPCRoute backendRef
+naming a targeted Service, lowered as above onto the ALB that balances that
+Service's endpoints. Ingress backends and stream routes do not read it. That
+ALB exists only in the endpoint routing mode, so elsewhere the policy is
+ignored, without a report. A named cookie is claimed per backendRef and host
+as a rule's is, so where two routes reach the Service on one host, only the
+older keeps the session. A rule's own `sessionPersistence` takes precedence,
+since its token already carries the Service and its endpoint. A `targetRef`
+must be a Service in the policy's namespace. When two policies target one
+Service, the older one applies and the younger one is reported; a policy
+whose `sessionPersistence` cannot be expressed claims nothing, and a younger
+valid one applies instead. `retryConstraint` is reported and ignored. The
+policy's status is not written back. The controller reads the kind only
+where it may list and watch it; see [kubernetes-rbac.md](/docs/kubernetes/kubernetes-rbac/).
+
+A [TricksterCachePolicy's](/docs/kubernetes/kubernetes-cache-policy/) `sticky` fields,
+and the `sticky` class parameters above, apply to a Service's endpoint ALB
+when neither the rule nor the Service's traffic policy asks for a session.
 
 ## GRPCRoute
 
@@ -469,20 +654,124 @@ unresolved reference, keeping its weight and refusing its share.
 
 Every connection, and every UDP client's session, is committed to one
 backendRef by weighted round robin, and in the endpoint routing mode to one
-of that Service's ready endpoints in turn; a member that cannot be dialed
+of that Service's ready endpoints, in turn unless the GatewayClass's
+`load_balancing` parameter names another mechanism. The split between
+backendRefs is always round robin, because Gateway API makes those weights an
+exact apportionment; the mechanism applies within each Service. A key that a
+route's listener cannot read, such as `sni` on a TCPRoute, is ignored in
+favor of the client address. A member that cannot be dialed
 refuses the connection rather than passing it to a sibling, an unresolved
 reference refuses its share without a lookup, and it is the Service's
 readiness that takes an endpoint out of rotation. The
 `health_mode` parameter does not apply to stream members, which are always
 judged by readiness, since no probe speaks the protocol they carry. A stream
-route caches nothing, and a `TricksterCachePolicy` cannot target one;
-`kubernetes.defaults` and a GatewayClass's parameters reach it only for
-`routing_mode`.
+route caches nothing, and a `TricksterCachePolicy` cannot target a TCPRoute or
+TLSRoute; one on a UDPRoute applies only where a `trickstercache.org/moq`
+listener serves it ([MoQ relays](#moq-relays)), and is reported elsewhere. It
+reads only its routing mode, load balancing and sticky settings, from the
+class's parameters or a TricksterCachePolicy on its Gateway, and its routing
+mode also from `kubernetes.defaults.routing_mode`. A stream route's
+session is kept in a table whichever of `cookie`, `header` or `table`
+`sticky` names, and not at all with `none` or when unset: by `client_ip`,
+or by `sni` on a TLSRoute when `sticky_key` says so. The ALB the listener
+maps to keeps it for the whole path, so in the endpoint routing mode a
+client returns to the same Service and pod, and in the `service` routing
+mode a route with several backendRefs keeps a client on its Service.
 
 The controller watches the three kinds only in a cluster whose experimental
 Gateway API channel serves them (`gateway.networking.k8s.io/v1alpha2`); see
 [kubernetes-rbac.md](/docs/kubernetes/kubernetes-rbac/). Their status is written as an
 HTTPRoute's is.
+
+## MoQ relays
+
+Trickster relays [Media over QUIC Transport](/docs/object-caching/moq/) (MoQ) through a Gateway
+in two ways, each generating a `moq` backend:
+
+- **Native QUIC.** A `trickstercache.org/moq` listener opens a MoQ listener on
+  the declared UDP port. It terminates TLS as an `HTTPS` listener does, with
+  certificates supplied from the referenced Secrets at runtime, and carries
+  `UDPRoute`s. Each route is served with one rule, and the oldest route naming
+  a hostname on a port serves it, as a TLSRoute serves its server names. A
+  backendRef names a Service port carrying UDP where a native MoQ origin
+  listens, dialed as `moqt://<service>.<namespace>.svc:<port>/`.
+- **WebTransport.** An `HTTPRoute` rule whose `TricksterCachePolicy` names
+  `provider: moq` relays the WebTransport sessions browsers open. The policy
+  may target the route, the rule, or every Service the rule reaches (or one
+  port of each); a rule whose backendRefs mix MoQ origins with other Services
+  is refused. The rule's listener must be an `HTTPS` listener serving HTTP/3;
+  on any other the rule is refused, with `ResolvedRefs` `False` and reason
+  `UnsupportedProtocol`. Each match accepts sessions at and below its path (a
+  `RegularExpression` path as a pattern), and a backendRef names a Service
+  port carrying UDP where a WebTransport origin listens, dialed as
+  `https://<service>.<namespace>.svc:<port>/`. Filters, timeouts, retries and
+  session persistence shape HTTP requests, which a session is not, so they
+  are reported and ignored.
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: media
+  namespace: infra
+spec:
+  gatewayClassName: trickster
+  listeners:
+    - name: moq
+      port: 443
+      protocol: trickstercache.org/moq
+      hostname: live.example.com
+      tls:
+        certificateRefs:
+          - name: live-tls
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: UDPRoute
+metadata:
+  name: live
+  namespace: media
+spec:
+  parentRefs:
+    - name: media
+      namespace: infra
+  rules:
+    - backendRefs:
+        - name: origin
+          port: 4443
+```
+
+A rule with several backendRefs relays each track from one of them: the
+generated backend reaches its origins through an ALB named for it with an
+`-origins` suffix, by `hrw` unless the policy's `loadBalancing` names `rr`,
+`p2c` or `lc`, apportioned by the backendRefs' weights. When an origin fails,
+its tracks move to the others, and an unresolved reference keeps its weight
+with an origin that never answers, so its tracks move too.
+
+The relay takes `cacheName` (where groups leaving the live edge are kept),
+`maxTTL` and `loadBalancing` from the class's parameters and the policies
+governing the route and its Services; the policy fields only HTTP responses
+have are reported as ignored when set (see
+[kubernetes-cache-policy.md](/docs/kubernetes/kubernetes-cache-policy/#moq-relays)).
+QUIC is always encrypted: without a BackendTLSPolicy on the Service, the
+origin's certificate is not verified, trusting the cluster network as a
+plaintext HTTP backend does, and with one it is verified against the
+policy's CA certificates and hostname. A relay always addresses the
+Service's cluster IP, whatever the routing mode, since it keeps each track
+on one origin for as long as it relays it. On a native listener, each
+route's generated backend carries the class's `ip_acl_name` (else
+`kubernetes.defaults.ip_acl_name`) and its geo ACL, as on any other route,
+and a session is judged by the lists of the backend it is routed to, so
+routes sharing the listener keep their own. A native session carries no
+HTTP credentials, so a class with an `authenticator_name` (or
+`kubernetes.defaults.authenticator_name`) does not serve its MoQ UDPRoutes:
+each is refused with `UnsupportedValue` rather than served
+unauthenticated. Serve them from a class without one.
+
+A client reaches a UDP port only where the Service in front of the
+controller publishes it. [gateway-service.yaml](https://github.com/trickstercache/trickster/blob/main/deploy/kube/gateway-service.yaml)
+publishes UDP 443 beside TCP 443, which carries HTTP/3, WebTransport and a
+`trickstercache.org/moq` listener on 443 alike; a listener on another port
+needs a UDP entry of its own.
 
 ## Endpoint routing mode
 
@@ -492,7 +781,9 @@ ready endpoints, discovered from its EndpointSlices, rather than a backend
 addressing the Service's cluster IP. Each pool carries everything the
 backendRef would have carried — cache, timeout, TLS, filters. Endpoint churn
 reaches the pools without a configuration reload, and a rolling restart
-drains terminating endpoints before their pods stop. The controller's
+drains terminating endpoints before their pods stop: they take no new
+clients, keep the sessions pinned to them, and leave the pool once they stop
+serving. The controller's
 service account needs `endpointslices` list and watch for it; see
 [kubernetes-rbac.md](/docs/kubernetes/kubernetes-rbac/).
 
@@ -632,6 +923,8 @@ the listeners it generates and in `kubernetes.defaults`:
 |---|---|---|---|
 | `max_request_body_size_bytes` | listener | 10 MiB (the default), higher for upload paths | A request body above it is refused with `413` before it reaches an origin; `truncate_request_body_too_large` is for logging, not proxying |
 | `read_header_timeout` | listener | 10s | Bounds a client that sends headers slowly; has no effect on the body or the response |
+| `idle_timeout` | listener | 2m (the default) | Closes keep-alive connections that wait too long for their next request; `0` never closes them |
+| `max_header_bytes` | listener | 64 KiB | Bounds the memory one request's headers can take; the default is 1 MB |
 | `connections_limit` | listener | 0 (unlimited), or the pod's file descriptor budget | A limit blocks accepts rather than refusing them |
 | `proxy_protocol`, `trusted_proxies` | listener | the load balancer's addresses | The real client address in logs and `max_query_range` decisions; see [Trusted Proxies](/docs/getting-started/configuring/#trusted-proxies) |
 | `timeout` | `kubernetes.defaults` | 60s (the default) | Bounds how long an origin may take to start a response and how long its body may stall; a route's `timeouts` bound more |
@@ -659,6 +952,11 @@ Gateways merge on the port as described under Listeners. A deployment that
 needs Gateways at distinct addresses runs one controller Deployment per
 GatewayClass ([kubernetes-deploy.md](/docs/kubernetes/kubernetes-deploy/#ports-and-addresses)).
 
+The suite at the version this build pins has no session persistence tests,
+and names no feature for it, so `sessionPersistence` is outside the report.
+The kind scenario `TestGatewaySessionPersistenceKind` covers it instead,
+with a cookie and a header session over two Services.
+
 The report lists the extended features claimed. They cover query parameter,
 method and port matching, request and response header modification on rules
 and backendRefs, path, host, scheme and port rewrites and redirects, request
@@ -678,13 +976,12 @@ WebSocket and h2c backend protocols.
 | Multiple `RequestMirror` filters on one rule | A rule carries one mirror |
 | `BackendTLSPolicy` status, `subjectAltNames` | The policy is honored; its status is not written back and `subjectAltNames` is refused |
 | A `TLS` listener in `Terminate` mode | Not served; `Passthrough` only |
-| `sessionPersistence` | Reported and ignored |
+| `XBackendTrafficPolicy` status and `retryConstraint` | Its `sessionPersistence` is honored; its status is not written back and `retryConstraint` is ignored |
+| `sessionPersistence` in the `service` routing mode | Kept only on a rule with several backendRefs, and then on the Service alone; see [Session persistence](#session-persistence) |
 | Rate limiting | Rate-limit at the load balancer in front, or at the origin |
-
-Session affinity has no Gateway API equivalent here: a weighted rule
-apportions each request independently, so an origin that needs affinity
-should carry its own session state, or be served by a single `backendRef` in
-`routing_mode: service` so the Service's own session affinity applies.
+| MoQ publishing through a Gateway | A generated `moq` backend relays from its origins and accepts no publishers |
+| MoQ listener and relay tuning | Drafts, session limits, GOAWAY URIs and the live edge take their defaults |
+| MoQ relays in the `endpoint` routing mode | A relay addresses the Service's cluster IP; see [MoQ relays](#moq-relays) |
 
 ## Generated configuration
 

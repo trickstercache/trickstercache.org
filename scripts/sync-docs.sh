@@ -105,11 +105,12 @@ getting-started|Getting Started|10|How to get up and running with Trickster.
 backends|Backends|20|Configuring the upstream origins that Trickster accelerates: multiple backends, health checks, authentication and AWS request signing.
 listeners|Listeners & TLS|30|Inbound listeners and the protocols they serve: TLS certificates, HTTP/3 and Apache Arrow Flight SQL. Base listener settings, trusted proxies and TCP/UDP stream listeners are described in [Configuring Trickster](/docs/getting-started/configuring/#inbound-listeners).
 caching|Caching|40|Cache data stores and behaviors common to all of Trickster's caching modes.
-object-caching|Object Caching|50|Accelerating generic HTTP objects with Trickster's Reverse Proxy Cache.
+object-caching|Object Caching|50|Accelerating generic HTTP objects with Trickster's Reverse Proxy Cache, and live media with its Media over QUIC relay.
 time-series-caching|Time Series Caching|60|Accelerating time series databases with Trickster's Delta Proxy Cache.
 time-series-caching/providers|Providers|100|Guides for each supported time series provider.
 routing|Routing & Load Balancing|70|Directing requests across multiple backends with the ALB, autodiscovery and Rule engine.
 request-handling|Request Handling|80|Customizing how Trickster processes HTTP requests and responses.
+security|Security & Policy|85|Controlling who can reach Trickster and how often: IP access lists, geo ACLs and rate limiting.
 kubernetes|Kubernetes|90|Running Trickster on Kubernetes, and using it as a Gateway API and Ingress controller with cluster-native caching policy.
 observability|Observability|100|Metrics, logs, distributed tracing, and debugging Trickster's behavior.
 release-notes|Release Notes|110|What's new and changed in each Trickster release.
@@ -128,24 +129,33 @@ multi-origin.md|backends|Multiple Backends
 health.md|backends|
 authenticator.md|backends|
 aws.md|backends|
+origin-resolution.md|backends|DNS SRV Origins
+static.md|backends|Static File Server
 tls.md|listeners|
 http3.md|listeners|
 flight-sql.md|listeners|Flight SQL Listeners
+acme.md|listeners|ACME Certificates
 caches.md|caching|
 retention.md|caching|Retention Policies
 chunked_caching.md|caching|
 negative-caching.md|caching|
 range_request.md|object-caching|Byte Range Requests
 collapsed-forwarding.md|object-caching|
+moq.md|object-caching|Media over QUIC Relay
 supported-backend-providers.md|time-series-caching|Supported Providers
 per-query-instructions.md|time-series-caching|
 query-range-limits.md|time-series-caching|
+step-alignment.md|time-series-caching|
 timeseries_sharding.md|time-series-caching|Request Sharding
 prometheus.md|time-series-caching/providers|Prometheus
 clickhouse.md|time-series-caching/providers|ClickHouse
 influxdb.md|time-series-caching/providers|InfluxDB
 druid.md|time-series-caching/providers|Apache Druid
 graphite.md|time-series-caching/providers|Graphite
+postgres.md|time-series-caching/providers|PostgreSQL & TimescaleDB
+greptimedb.md|time-series-caching/providers|GreptimeDB
+questdb.md|time-series-caching/providers|QuestDB
+victoriametrics.md|time-series-caching/providers|VictoriaMetrics
 mysql.md|time-series-caching/providers|MySQL
 alb.md|routing|Application Load Balancer
 alb-autodiscovery.md|routing|ALB Autodiscovery
@@ -155,6 +165,9 @@ request_rewriters.md|request-handling|
 body.md|request-handling|Request Body Handling
 cors.md|request-handling|CORS
 simulated-latency.md|request-handling|
+ip-acl.md|security|IP Access Lists
+geo-acl.md|security|Geo ACLs
+rate-limiting.md|security|Rate Limiting
 kubernetes-deploy.md|kubernetes|Deploying on Kubernetes
 kubernetes-gateway.md|kubernetes|Gateway API
 kubernetes-ingress.md|kubernetes|Ingress
@@ -164,6 +177,7 @@ metrics.md|observability|Metrics
 tracing.md|observability|Tracing
 access-logs.md|observability|Access & Error Logs
 trickster-result.md|observability|X-Trickster-Result Header
+new-changed-2.2.md|release-notes|What's New in 2.2
 new-changed-2.1.md|release-notes|What's New in 2.1
 new-changed-2.0.md|release-notes|What's New in 2.0
 "

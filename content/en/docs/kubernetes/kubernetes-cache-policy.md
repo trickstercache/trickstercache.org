@@ -38,6 +38,7 @@ A policy governs the objects its `targetRefs` name, in the policy's own namespac
 |---|---|---|---|
 | `Gateway` | `gateway.networking.k8s.io` | every route attached to the Gateway | not supported |
 | `HTTPRoute` | `gateway.networking.k8s.io` | every rule of the route | one rule, by the rule's `name` |
+| `UDPRoute` | `gateway.networking.k8s.io` | the route, where a `trickstercache.org/moq` listener serves it; see [MoQ relays](#moq-relays) | not supported |
 | `Service` | `""` | every backendRef and Ingress backend naming the Service | one named port |
 | `Ingress` | `networking.k8s.io` | every rule of the Ingress | not supported |
 
@@ -49,7 +50,7 @@ configured default:
 
 1. the GatewayClass's `parametersRef` ([kubernetes-gateway.md](/docs/kubernetes/kubernetes-gateway/#gatewayclass-parameters)), or an Ingress's annotations;
 2. a policy on the Gateway;
-3. a policy on the HTTPRoute or Ingress;
+3. a policy on the HTTPRoute, UDPRoute or Ingress;
 4. a policy on the route's rule, by `sectionName`;
 5. a policy on the backend's Service, then one on the Service's port.
 
@@ -91,7 +92,7 @@ spec:
 | Field | Value | Effect |
 |---|---|---|
 | `handler` | `proxy`, `proxycache` | the path handler; `proxycache` makes the backend cache-capable |
-| `provider` | `prometheus`, `influxdb`, `clickhouse`, `graphite` | serves the target through a time series provider; see below |
+| `provider` | `prometheus`, `influxdb`, `clickhouse`, `graphite`, `moq` | serves the target through a time series provider, or as a MoQ relay; see below |
 | `cacheName` | a configured cache | which cache a caching route uses |
 | `negativeCacheName` | a configured negative cache | how long error responses are cached |
 | `maxTTL` | a duration, e.g. `10m` | caps how long a cached object is served before revalidation |
@@ -104,14 +105,22 @@ spec:
 | `cors.mode` | `preserve`, `merge`, `replace`, `disable` | how origin CORS headers combine with the configured ones |
 | `cors.headers` | a map of headers | the CORS headers `merge` and `replace` apply |
 | `healthMode` | `probe`, `provider` | how discovered members are judged healthy in the endpoint routing mode |
+| `loadBalancing` | `rr`, `p2c`, `lc`, `lt`, `hrw` | how traffic is spread across a Service's endpoints in the endpoint routing mode; `rr` unless set. See [the ALB mechanisms](/docs/routing/alb/) |
+| `loadBalancingKey` | `client_ip`, `host`, `header:<name>`, `cookie:<name>`, `query:<name>` | what `hrw` keeps on one endpoint; `client_ip` unless set |
+| `sticky` | `cookie`, `header`, `table`, `none` | keeps a client on the endpoint it first reached, on an HTTP route or Ingress in the endpoint routing mode; `none` turns off a less specific setting's. A cookie's `Max-Age` ends with its token, at most `stickyTTL` after the session began. A TCP, TLS or UDP route keeps it in a table. See [kubernetes-gateway.md](/docs/kubernetes/kubernetes-gateway/#session-persistence) |
+| `stickyKey` | `client_ip`, `host`, `header:<name>`, `cookie:<name>`, `query:<name>`, `sni` | what `table` mode keeps a client's endpoint by; `client_ip` unless set, and a key the route's listener cannot read (`sni` on an HTTP route, for one) is left at that |
+| `stickyTTL`, `stickyIdle` | a duration of at least `1s` | a session ends that long after it began (`1h` unless set), or once unused that long |
 | `resultHeader` | `Expose`, `Hide` | whether `X-Trickster-Result` reaches the client; see below |
+| `stepAlignment` | `truncate`, `drop`, `partial`, `partial_start`, `partial_end`, `off` | the [step alignment](/docs/time-series-caching/step-alignment/) mode of the time series backend `provider` makes; a mode the policy's `provider` doesn't support makes the policy `Invalid` |
 
 In a header map a name prefixed with `-` deletes the header and one prefixed with `+`
 appends to it rather than replacing, exactly as in the annotations and in Trickster's own
 `request_headers`. Durations require a unit. `cacheName` and `negativeCacheName` select
 among what the operator configured; the operator-tier names — a tracer, a request
-rewriter, an authenticator — have no field here either, for the reason given in the
-Ingress document: a policy that could name an authenticator could also omit one.
+rewriter, an authenticator, a geo ACL, an IP access list — have no field here either, for the
+reason given in the Ingress document: a policy that could name an authenticator or an access
+control list could also omit one. A route's geo ACL stays as `kubernetes.defaults` or its class
+set it, whatever policy the route carries.
 
 `maxTTL`, `cacheName`, `negativeCacheName`, `cacheKeyParams` and `cacheKeyHeaders` take
 effect only on a route that caches: one whose effective handler is `proxycache`, from
@@ -160,10 +169,34 @@ Three things follow:
   conflict, since every provider predefines it as a plain proxy catch-all.
 
 The generated backend carries only what the policy and the configured defaults describe:
-an origin, a cache, timeouts, headers. Provider settings with no policy field — a
+an origin, a cache, timeouts, headers. An IP access list name, when the backend has one,
+comes from `kubernetes.defaults.ip_acl_name` or the GatewayClass `ip_acl_name` parameter,
+not from this policy. A rate limiter name, when the backend has one, comes from
+`kubernetes.defaults.rate_limiter_name` or the GatewayClass `rate_limiter_name` parameter,
+the same way. This policy cannot set either name or clear it. Provider settings with no policy field — a
 Prometheus `instant_round`, an InfluxDB `flux` block, a Graphite `render` section — take
 their defaults. MySQL is served over its own wire protocol rather than HTTP and cannot be
 selected.
+
+## MoQ relays
+
+`provider: moq` makes the generated backend a [MoQ Transport](/docs/object-caching/moq/) relay rather
+than an HTTP proxy. On an HTTPRoute it relays the WebTransport sessions that arrive over
+HTTP/3; on a UDPRoute served by a `trickstercache.org/moq` listener, which makes a relay
+of the route with or without a policy, it relays native QUIC sessions. A policy on a
+Service makes a relay of every HTTPRoute rule that reaches only MoQ origins. See
+[kubernetes-gateway.md](/docs/kubernetes/kubernetes-gateway/#moq-relays) for both kinds of listener.
+
+A relay applies four fields: `cacheName`, the cache that groups leaving its in-memory
+live edge are kept in; `maxTTL`, how long a kept group lives at most (the backend default of
+25 hours unless set); `negativeCacheName`, whose `404` entry keeps an origin's
+`DOES_NOT_EXIST` refusal of a track (see [MoQ caching](/docs/object-caching/moq/#caching)); and
+`loadBalancing`, how a rule with several backendRefs places each track on one of them
+(`rr`, `p2c`, `lc` or `hrw`, `hrw` unless set). The others shape HTTP requests and
+responses, which a session has none of: `handler`, `timeout`,
+`collapsedForwarding`, `cacheKeyParams`, `cacheKeyHeaders`, `requestHeaders`,
+`responseHeaders`, `cors`, `healthMode`, `loadBalancingKey`, `sticky`, `resultHeader` and
+`stepAlignment`. Each one set is reported by Event, and the rest of the policy applies.
 
 ## Cache key components
 

@@ -21,7 +21,9 @@ listeners:
     tls_address: ''
 ```
 
-Note, Trickster will only start listening on a TLS port if at least one origin mapped to the named listener has a valid certificate and key configured.
+Note, Trickster will only start listening on a TLS port if at least one origin mapped to the named listener has a valid certificate and key configured, obtains its certificates through [ACME](/docs/listeners/acme/), or the listener sets `tls_runtime_certs`.
+
+Instead of certificate files, a backend can have Trickster obtain and renew its certificates from an ACME certificate authority such as Let's Encrypt. See [Automatic Certificates (ACME)](/docs/listeners/acme/).
 
 Each origin section of a Trickster config file can be augmented with the optional `tls` section to modify TLS behavior for front-end and back-end requests. For example:
 
@@ -107,11 +109,11 @@ listeners:
     tls_runtime_certs: true
 ```
 
-Such a listener starts with an empty certificate store and fails handshakes until the first certificate is supplied. Certificates supplied at runtime are validated with the same pair-coherence checks as files, participate in SNI selection alongside any file-sourced certificates on the same listener, appear in the certificate inventory with source `memory`, and survive configuration reloads and file rotations: a reload replaces only the config-sourced certificates, and a rotation replaces only the file-sourced ones. `tls_runtime_certs` is valid only on `http` listeners.
+Such a listener starts with an empty certificate store and fails handshakes until the first certificate is supplied. Certificates supplied at runtime are validated with the same pair-coherence checks as files, participate in SNI selection alongside any file-sourced certificates on the same listener, appear in the certificate inventory with source `memory`, and survive configuration reloads and file rotations: a reload replaces only the config-sourced certificates, and a rotation replaces only the file-sourced ones. `tls_runtime_certs` is valid only on `http` and [`moq`](/docs/object-caching/moq/) listeners; on a `moq` listener it serves QUIC handshakes with the supplied certificates in place of a backend's file pair.
 
 ## Certificate Inventory (mgmt)
 
-The mgmt listener exposes a read-only, per-listener certificate inventory at `/trickster/certificates` (configurable via `mgmt.certificates_handler_path`). Each entry reports the certificate's id, source kind (`file`, `memory` or `config`), common name, subject alternative names, validity window and last-load time. The inventory never includes key material.
+The mgmt listener exposes a read-only, per-listener certificate inventory at `/trickster/certificates` (configurable via `mgmt.certificates_handler_path`). Each entry reports the certificate's id, source kind (`file`, `memory`, `acme` or `config`), common name, subject alternative names, validity window and last-load time. The inventory never includes key material.
 
 ## Observability
 

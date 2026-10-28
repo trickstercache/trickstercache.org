@@ -9,11 +9,17 @@ Trickster 2.x provides an Application Load Balancer that is easy to configure an
 | Mechanism | Config | Provides | Description |
 |-----|-----|-----|----|
 | Round Robin | rr | Scaling | a basic, stateless round robin between healthy pool members |
+| Power of Two Choices | p2c | Scaling | draws two healthy pool members at random and routes to the one with fewer requests in flight |
+| Least Connections | lc | Scaling | routes to the healthy pool member with the fewest requests in flight |
+| Least Time | lt | Speed | routes to the healthy pool member with the lowest response latency, scaled by its requests in flight |
+| Highest Random Weight | hrw | Affinity | consistently routes each client, tenant or other key to the same healthy pool member |
 | Time Series Merge | tsm | Federation | uses scatter/gather to collect and merge data from multiple replica tsdb sources |
 | First Response | fr | Speed | fans a request out to multiple backends, and returns the first response received |
 | First Good Response | fgr | Speed | fans a request out to multiple backends, and returns the first response received with a status code < 400 |
 | Newest&nbsp;Last‑Modified | nlm | Freshness | fans a request out to multiple backends, and returns the response with the newest Last-Modified header |
 | User Router | ur | Control | Inspects the credentials in the Request and routes it based on the Username |
+| Connect Race | race | Speed | connects a `tcp` or `tls` stream connection to several pool members at once and relays over the first to connect |
+| UDP Mirror | mirror | Replication | copies every datagram of a `udp` stream session to every healthy pool member, and answers from the first |
 
 ## Integration with Backends
 
@@ -33,7 +39,7 @@ Each mechanism has its own use cases and pitfalls. Be sure to read about each on
 
 A basic **Round Robin** rotates through a pool of healthy backends used to service client requests. Each time a client request is made to Trickster, the round robiner will identify the next healthy backend in the rotation schedule and route the request to it.
 
-The Trickster ALB is intended to support stateless workloads, and currently does not support Sticky Sessions or other advanced ALB capabilities.
+To keep each client on the member it was first sent to, add [Sticky Sessions](#sticky-sessions) to the ALB. For affinity without session state, see [Highest Random Weight](#highest-random-weight).
 
 #### Weighted Round Robin
 
@@ -46,15 +52,13 @@ pool:
     weight: 3         # receives 3 of every 4 requests
 ```
 
-Apportionment is exact: over any `totalWeight` consecutive requests against a stable healthy pool, each member is selected exactly `weight` times. Weights also carry through from autodiscovery sources that convey them (DNS SRV record weights, member-file `weight` fields); see [ALB Autodiscovery](/docs/routing/alb-autodiscovery/).
+Apportionment is exact: over any `totalWeight` consecutive requests against a stable healthy pool, each member is selected exactly `weight` times. A heavier member's turns are spread through the rotation rather than taken back to back: two members weighted 3 and 2 are served `A B A A B`, not `A A A B B`. Weights also carry through from autodiscovery sources that convey them (DNS SRV record weights, member-file `weight` fields); see [ALB Autodiscovery](/docs/routing/alb-autodiscovery/).
 
-The legacy workaround of repeating a member name multiple times in the pool list still functions, but explicit weights replace it and are preferred.
-
-Weights apply to mechanisms that select a single member per request (round robin). Fan-out mechanisms (fr, fgr, nlm, tsm) dispatch to every healthy member regardless of weight.
+Weights apply to every mechanism that selects a single member per request, though only Round Robin makes them an exact guarantee; see [Weights and the Selection Mechanisms](#weights-and-the-selection-mechanisms). Fan-out mechanisms (fr, fgr, nlm, tsm) dispatch to every healthy member regardless of weight.
 
 #### More About Our Round Robin Mechanism
 
-Trickster's Round Robin Mechanism works by maintaining an atomic uint64 counter that increments each time a request is received by the ALB. With uniform weights, the ALB performs a modulo operation on the request's counter value, with the denominator being the count of healthy backends in the pool; the resulting value, ranging from `0` to `len(healthy_pool) - 1`, indicates the assigned backend based on the counter and current pool size. With mixed weights, the modulo denominator becomes the pool's total weight, and each member owns a contiguous `weight`-sized span of that rotation. Selection remains lock- and allocation-free in both forms.
+Trickster's Round Robin Mechanism works by maintaining an atomic uint64 counter that increments each time a request is received by the ALB. With uniform weights, the ALB performs a modulo operation on the request's counter value, with the denominator being the count of healthy backends in the pool; the resulting value, ranging from `0` to `len(healthy_pool) - 1`, indicates the assigned backend based on the counter and current pool size. With mixed weights, the modulo denominator becomes the pool's total weight, and the result indexes a rotation schedule, computed once each time the set of healthy members changes, in which every member's turns are evenly spaced. Selection remains lock- and allocation-free in both forms. The counter starts at a random value, so a fleet of Trickster replicas started together does not send its first requests to the same pool member.
 
 #### Example Round Robin Configuration
 
@@ -96,6 +100,369 @@ Here is the visual representation of this configuration:
 
 <img src="/images/docs/alb-rr.png" width="800">
 
+### Power of Two Choices
+
+The **Power of Two Choices** (p2c) mechanism draws two healthy pool members at random and routes the request to whichever has fewer requests in flight. It keeps load nearly as even as inspecting every member would, at a cost that does not grow with the size of the pool, and unlike Round Robin it reacts to a member that has become slow: requests pile up there, so it loses more of its draws. It is a good default for large pools and for requests whose cost varies widely.
+
+```yaml
+backends:
+  api:
+    provider: alb
+    alb:
+      mechanism: p2c # or power_of_two_choices
+      pool: [ node01, node02, node03 ]
+```
+
+### Least Connections
+
+The **Least Connections** (lc) mechanism routes each request to the healthy pool member with the fewest requests in flight. It reads every member on every request, so it suits small pools; Power of Two Choices approximates it for large ones. While several members are tied, as all are when the pool is idle, they take turns.
+
+```yaml
+backends:
+  api:
+    provider: alb
+    alb:
+      mechanism: lc # or least_connections
+      pool: [ node01, node02 ]
+```
+
+### Least Time
+
+The **Least Time** (lt) mechanism routes each request to the healthy pool member that has been answering fastest. Each member's score is its latency average multiplied by one more than its requests in flight, and the lowest score wins, so a fast member is preferred until it is busy enough that a slower one would answer sooner.
+
+Latency is the time from routing a request to the first byte of its response. The average rises at once when a member slows down and falls gradually, over `lt.decay`, as it recovers. A few details keep the ranking honest:
+
+* A member with no requests yet, such as one just discovered, is scored as its fastest peer. It shares that peer's requests until its own first response ranks it, so it is neither flooded as the apparent fastest nor left waiting for a turn that an idle pool would never give it.
+* A failed request is recorded as a long latency rather than a short one, so a member that returns errors in a millisecond never looks fast. By default a response of `502`, `503` or `504` is a failure, as is one that was never completed; `lt.status_codes` sets the codes that count as a good answer instead, as bare codes, inclusive ranges, or both. A request the client abandoned counts neither way.
+* A member's average fades while it is passed over, so one ranked last on an old measurement or a past failure is tried again rather than ignored for good.
+* Averages survive a configuration reload and autodiscovery membership changes.
+
+When the pool is idle and its members are equally loaded, every request goes to the fastest member. That is the mechanism working as intended; choose `p2c` or `lc` to spread idle traffic instead.
+
+```yaml
+backends:
+  video:
+    provider: alb
+    alb:
+      mechanism: lt # or least_time
+      pool: [ edge01, edge02 ]
+      lt:
+        decay: 10s # default
+        status_codes: [ { start: 200, end: 499 } ] # optional; default is every code but 502, 503 and 504
+```
+
+### Highest Random Weight
+
+The **Highest Random Weight** (hrw) mechanism, also known as rendezvous hashing, routes every request that shares a key to the same healthy pool member. Use it to keep a client or tenant on one member's warm cache. When a member leaves the pool, only the keys it owned move, each to a different remaining member; when it returns, exactly those keys move back. The mapping depends only on the key and the members' names, so every Trickster replica agrees on it and a restart does not change it.
+
+`hrw.key` selects what is hashed:
+
+| Key | Follows |
+|-----|-----|
+| `client_ip` (default) | the client's IP address, after [trusted proxy](/docs/getting-started/configuring/) resolution. The port is never part of the key. IPv6 addresses are keyed on their leading `hrw.ipv6_prefix` bits (default `64`), because privacy addressing changes the rest of a client's address over time. |
+| `host` | the request's host name, without its port and without regard to case |
+| `header:<name>` | the first value of the named request header |
+| `cookie:<name>` | the value of the named cookie |
+| `query:<name>` | the value of the named query string parameter, as written in the URL |
+| `sni` | the TLS server name the client offered; only for an ALB that serves a `tls` [stream listener](#load-balancing-stream-listeners) |
+| `proxy_tlv:<type>` | the value of a [PROXY protocol](/docs/getting-started/configuring/) version 2 TLV, such as `proxy_tlv:0xEA` for an AWS VPC endpoint ID; only for an ALB that serves a `tcp` or `tls` stream listener with `proxy_protocol` enabled. The type is one byte, written in decimal or `0x` hex. |
+| `user` | the user name a session authenticated as; only for an ALB that serves a [native protocol listener](#load-balancing-native-protocol-sessions) |
+
+A request that lacks the configured key, such as one without the header, has no affinity to preserve and is routed to a member at random.
+
+hrw balances keys, not requests. With many keys of similar volume the members' loads even out, but a single very busy key is always served by one member.
+
+hrw keeps no state, so a key moves when a member joins the pool and wins it, and a client with no stable key has no affinity at all. To keep a client on its member for as long as its session lasts, whatever the pool does, add [Sticky Sessions](#sticky-sessions), which work with hrw as with every mechanism that selects one member.
+
+```yaml
+backends:
+  tenants:
+    provider: alb
+    alb:
+      mechanism: hrw # or highest_random_weight
+      pool: [ cache01, cache02, cache03 ]
+      hrw:
+        key: header:X-Tenant
+```
+
+### Sticky Sessions
+
+An ALB whose mechanism selects one member per request, `rr`, `p2c`, `lc`, `lt` or `hrw`, can keep each client on the member it was first sent to. The mechanism chooses a new client's member; after that, the client's requests go to the same member for as long as its session lasts and that member is available, even as members join or leave the pool. The same holds for the connections of a [stream listener](#load-balancing-stream-listeners) and the sessions of a [native protocol listener](#load-balancing-native-protocol-sessions); see [Stream and native listeners](#stream-and-native-listeners).
+
+```yaml
+backends:
+  app:
+    provider: alb
+    alb:
+      mechanism: p2c
+      pool: [ app1, app2, app3 ]
+      sticky:
+        ttl: 8h
+        secret_file: /etc/trickster/sticky.key
+```
+
+A session is kept in one of three ways, set by `sticky.mode`:
+
+| Mode | How the member is remembered | Suits |
+|-----|-----|-----|
+| `cookie` (the default on http listeners) | The ALB issues a signed token naming the member in a cookie, which the browser sends back. The ALB keeps no state. | browsers |
+| `header` | The same token in a response header, `X-Trickster-Session` by default, which the client sends back in a request header of the same name. | API clients and SDKs that do not keep cookies |
+| `table` (the default on stream and native listeners) | The ALB remembers each client's member by a key read from its requests, connections or sessions, such as its address or a header. | clients with a stable identifier of their own, upstreams that hand out their own session ids, and every listener that is not http |
+
+The settings, with their defaults:
+
+```yaml
+      sticky:
+        mode: ""                 # cookie, header or table; unset is cookie on http listeners, table on the others
+        ttl: 1h                  # a session's lifetime from its first request; 0 is no limit
+        idle: 0                  # ends a session left unused, as Session lifetimes describes; 0 never does
+        on_unavailable: repick   # repick or reject; see below
+        secret: ""               # the key tokens are signed with; see below
+        secret_file: ""          # a file holding it, in place of secret
+        cookie:                  # cookie mode only
+          name: trickster_sticky
+          path: /
+          domain: ""             # unset keeps the cookie to the host that set it
+          secure: auto           # auto marks it Secure when the request arrived over TLS; or true, false
+          http_only: true
+          same_site: lax         # lax, strict or none, which requires secure: true
+          lifetime: permanent    # or session, which never sets Max-Age; see below
+          mark_private: false
+        header:                  # header mode only
+          name: X-Trickster-Session
+        table:                   # table mode only
+          key: client_ip
+          learn: request         # or response; see below
+          ipv6_prefix: 64
+          max_entries: 100000
+```
+
+`ttl` and `idle` are 0 or at least 1s. With `mode` set, a `cookie`, `header` or `table` block that the mode never reads is a configuration error. With `mode` unset, a `cookie` block (for http listeners) and a `table` block (for the others) may both be set, and a `header` block is refused.
+
+Other settings that are refused: `sticky` on a mechanism other than `rr`, `p2c`, `lc`, `lt` and `hrw`; `cookie` or `header` mode on an ALB that serves no http listener; both `secret` and `secret_file`; a `cookie.path` that does not begin with `/`; a cookie name beginning `__Secure-` or `__Host-` without `secure: true`, or a `__Host-` one with a `domain` or a `path` other than `/`; `same_site: none` without `secure: true`; `table.learn: response` with a key other than `header:<name>` or `cookie:<name>`; and an `ipv6_prefix` above 128.
+
+#### Tokens
+
+In `cookie` and `header` mode the token carries the member, when the session began and when the token was issued, signed with HMAC-SHA256 under a key derived from `sticky.secret`. A token is bound to the ALB that issued it, so another ALB does not honor it. A client cannot choose its own member, and a token that is altered, signed with another key, issued by another ALB or past its lifetime is treated as no token: the request starts a new session. It is never an error.
+
+A token is issued with the response to a client's first request, including the `101 Switching Protocols` that opens a WebSocket, when its session moves to another member, and, with `idle` set, once more than half of `idle` has passed since the token was issued, so that an active session does not lapse. A request sent to the member its token names is otherwise answered with no token, so a steady client sees none after its first.
+
+A cookie carries a `Max-Age` that ends with its token when `ttl` is set. With `ttl: 0`, or with `lifetime: session`, it is a browser-session cookie, and the token itself still enforces `ttl` and `idle`. `secure: auto` marks the cookie `Secure` when the request reached Trickster over TLS; behind a load balancer that terminates TLS and forwards plain HTTP to Trickster, set `secure: true`. `mark_private: true` adds `Cache-Control: private` to a response that sets the cookie, unless that response is already `private` or `no-store`; see [Sticky Sessions and Caching](#sticky-sessions-and-caching).
+
+Two ALBs that set the same cookie (by name, domain and path) for a host they both serve would each replace the other's token in a browser, so Trickster refuses to start with such a configuration. A browser sends a host's cookies to every port and scheme, so this holds across listeners. To resolve it, give one of them its own `cookie.name`.
+
+ALBs whose served hosts do not overlap may share a cookie name, as long as the cookie sets no `domain`. A cookie with no domain goes back only to the host that set it. The hosts an ALB serves are:
+
+- every host, when it is the default backend, or when one of its paths registers on a listener and it has `any_host_routing` or path routing on (the default). Path routing answers `/<alb name>/...` on every host, whatever `hosts` lists. A path registers on a listener unless it is marked `dispatch_only` or names a handler the ALB lacks. The ALB's default paths count, unless `path_defaults_disabled` is set;
+- otherwise, the `hosts` its listener-registered paths answer for, joined by the hosts of its dispatchers, since a dispatched request keeps the host it arrived on. Its dispatchers are the ALBs that name it in their pool or `user_router`, and the rules that route to it. An ALB with `path_routing_disabled: true` and no `hosts`, or whose paths are all `dispatch_only`, serves only its dispatchers' hosts;
+- no host, when nothing but a mirror reaches it. A mirror discards its target's response, so no cookie from it reaches a browser, and such an ALB never conflicts.
+
+#### The secret
+
+Every Trickster replica behind one address, and every restart, must sign with the same key for a session to survive moving between them. Set `secret` to at least 32 bytes, or `secret_file` to a file that holds them, such as a mounted Kubernetes Secret; trailing line breaks in the file are ignored. Tokens made with one key are never honored with another. A `secret` that still contains `${`, an environment variable reference that was not expanded, is refused rather than used as a publicly known key.
+
+With neither set, the ALB signs with a random key that lasts as long as the process, and Trickster logs a warning each time it loads such a configuration, for every ALB that issues tokens on an http listener. That suits a single instance that can afford to start every session over when it restarts. A configuration reload keeps the process's key, so a reload alone never ends a session. See [Sticky Sessions Across Replicas](#sticky-sessions-across-replicas).
+
+#### When the pinned member is unavailable
+
+With `on_unavailable: repick`, the default, a request whose member is unavailable goes to the member the mechanism chooses, and its session moves there. With `reject`, the ALB answers `503 Service Unavailable` instead, for applications that cannot survive a move, and the client keeps its token so that it returns to its member once that member is available again. A member that has left the pool has no session to return to, so its clients start new sessions in either case.
+
+A member that is [draining](#draining-pool-members) keeps its sessions while it is available.
+
+On an http listener a session is pinned by its first response, whatever its status, so a session that began on a member answering with errors stays there until that member is marked unavailable, by its health check or by the pool's floor.
+
+#### Table mode
+
+In `table` mode the ALB keeps a table of each client's member, by `table.key`, which takes the same values as [`hrw.key`](#highest-random-weight). A request without the key is balanced by the mechanism and not remembered. An entry lasts `ttl` from when it was stored and ends early when unused for `idle`. A full table drops the least recently used of a sample of its entries to make room.
+
+With `table.learn: response` and a `header:<name>` or `cookie:<name>` key, the ALB also remembers the value a member hands the client in its response, in the header of that name or in the `Set-Cookie` that sets that cookie. That keeps a session on the member that created it from the client's very next request, which is what an upstream that issues its own session ids needs. For example, for an MCP server whose replicas each know only the sessions they created:
+
+```yaml
+      sticky:
+        mode: table
+        table:
+          key: header:Mcp-Session-Id
+          learn: response
+```
+
+A response that sets a new value pins that value to the member too; the entry for the old value lasts until it expires.
+
+A table is kept in each Trickster instance's memory. It survives a configuration reload that leaves the ALB's `mode`, `ttl`, `idle` and `table` settings unchanged, but not a restart, and it is not shared between replicas: use `cookie` or `header` mode where sessions must outlive either, or see [Sticky Sessions Across Replicas](#sticky-sessions-across-replicas). With `key: client_ip`, every client behind one NAT address shares a session.
+
+#### Session lifetimes
+
+`ttl` and `idle` bound a session in every mode, but they count from different moments for a token and for a table entry:
+
+| | `cookie` and `header` mode | `table` mode |
+|-----|-----|-----|
+| `ttl` counts from | the session's first request. A refreshed token keeps that start; a session that moves to another member starts over. | when the entry was stored. An entry stored again, because its session moved, starts over. |
+| `idle` counts from | when the token was last issued. A request more than half of `idle` after that is answered with a fresh token, so an unused session ends between half of `idle` and `idle` after its last request. | the entry's last use, to within a second. |
+| after a reload | the new `ttl` and `idle` apply at once to every token already issued, since a token records only when its session began and when it was issued | a change to `mode`, `ttl`, `idle` or `table` starts the ALB's table empty |
+
+Renaming the ALB or a member ends the sessions they had, since tokens and table entries refer to both by name. Moving from one mode to another starts every session over, as does a change of the signing key.
+
+#### Stream and native listeners
+
+A `tcp`, `tls` or `udp` listener, or a native protocol listener such as `mysql`, carries no token, so an ALB keeps the sessions of its connections there in a table. `mode` is best left unset: an ALB that serves both http and stream listeners then issues cookies to its requests and keeps its connections in a table. `cookie` and `header` mode are refused on a listener that is not http. With `mode: table`, requests and connections share one table, so a client whose requests and connections share a key keeps one member for both; `table.key` must then be readable on every listener the ALB serves, which in practice means `client_ip`.
+
+`table.key` is read from each connection or session, as `hrw.key` is:
+
+| Listener | `table.key` |
+|-----|-----|
+| `tcp` | `client_ip`; `proxy_tlv:<type>` with `proxy_protocol` |
+| `tls` | `client_ip`, `sni`; `proxy_tlv:<type>` with `proxy_protocol` |
+| `udp` | `client_ip` |
+| native (`mysql`) | `client_ip`, `user` |
+
+`client_ip` is the address a [PROXY protocol](/docs/getting-started/configuring/) header names when the listener trusts one. `user` is the name a native session authenticated as. A connection or session without its key is balanced by the mechanism and not remembered.
+
+A connection is pinned to its member once it reaches it: a `tcp` or `tls` connection when it connects, a `udp` session when its member first answers, or when a one-way member's session ends with no port-unreachable, and a native session when it is handed to its member. A member that cannot be reached is never pinned. A `udp` session already stays with its member for its whole life; what a pin adds is that the client's next session, from any port, lands on the same member. A table entry is read only when a connection or session begins, so `idle` counts from the client's last new connection or session, however long that one lasts.
+
+With `on_unavailable: reject`, a connection whose pinned member is unavailable is refused, and so is one whose pinned member cannot be connected, however many `connect_retries` the ALB has: the retries would move the session. With `repick`, a failed connect is offered to other members as `connect_retries` allows, and its session moves to the one that connects. A native session that is refused fails to route, as it would with no member available.
+
+#### Sticky Sessions and Nested ALBs
+
+When a sticky ALB's pool has ALBs in it, such as one per region or per service, its token or table entry keeps the whole path: the inner ALB the client was sent to and that ALB's member. The inner ALBs need no `sticky` block of their own. An inner ALB whose mechanism fans requests out, or a User Router, is itself the session's member, and chooses among its own members as it would with no session. When only the inner member becomes unavailable, the session stays with its inner ALB and moves within it. On a stream listener, a connection retried after its inner member failed to connect is likewise offered the inner ALB's other members first.
+
+When the inner ALB has no member left that can take the session (a draining member the session is pinned to still can), the session moves with `on_unavailable: repick` to the first other member the mechanism offers that can take it, and is refused with `reject`, keeping its token or table entry for when its inner ALB recovers. A new session that the mechanism sends to an inner ALB with no member is answered `502 Bad Gateway`, or refused on a stream listener, as it would be with no sessions. Set `propagate_health: true` on the inner ALBs (see [ALBs as Pool Members](#albs-as-pool-members)) to keep new sessions away from one while it has no healthy member.
+
+The session covers one level of nesting: an ALB further in selects its member, or keeps sessions of its own if it has a `sticky` block, as it would with no outer session. An inner ALB directly in the sticky ALB's pool follows the outer session, and uses a `sticky` block of its own only for requests that reach it without going through the outer ALB.
+
+On a stream listener only the ALB that the listener maps to keeps sessions: an inner ALB's own `sticky` block applies to its http listeners, and to stream listeners mapped to it directly, never to connections that reach it through another ALB.
+
+#### Sticky Sessions and Caching
+
+In front of cacheable content, prefer `table` mode. It adds nothing to responses and sends members nothing the client did not, so every cache between the client and the origin sees exactly what it would see without sessions. Weigh its two limits first:
+
+- **A session is only as stable as its key.** With `key: client_ip`, every client behind one NAT address or forward proxy shares one session, and so one member, and a client whose address changes, such as a phone moving between networks, starts a new session. A `header:<name>` or `cookie:<name>` key needs a value that the client sends, or that the application hands it and `learn: response` picks up. A request without the key is balanced afresh every time.
+- **A table belongs to one Trickster instance.** A restart empties it, and another replica does not know its sessions. With several replicas, keep each client on one replica, or pair the table with `hrw` on the same key; see [Sticky Sessions Across Replicas](#sticky-sessions-across-replicas).
+
+Where those limits rule `table` mode out, use `cookie` mode with `mark_private: true`. `header` mode suits API clients with no shared cache in front of Trickster, since its token rides in responses and it has no `mark_private`.
+
+A token interacts with caches in three ways:
+
+- **A member's cache never stores it.** The ALB adds a token to a response after its member has answered, so a response served from a member's cache is given a token when its session needs one, like any other.
+- **The token travels upstream.** A member receives the request with its token still in the `Cookie` header, or in the `header.name` header. An origin that answers `Vary: Cookie` makes a member cache one copy per distinct `Cookie` header, and a cookie token gives every session a distinct one, so such content is cached once per session.
+- **A cache in front of Trickster sees the token.** HTTP lets a shared cache, such as a CDN, store a response that sets a cookie and replay it, cookie included, to other clients, which joins them to that session's member. A token in a response header is replayed the same way to clients that echo it back. That costs balance, not security, since a pin grants no access. In cookie mode, `mark_private: true` stops it by making each response that sets the cookie `private`, so a shared cache does not store that response. Only a session's first response, a move and an idle refresh carry a token, so most responses stay shareable.
+
+#### Sticky Sessions Across Replicas
+
+In `cookie` and `header` mode the client carries its session, so every Trickster replica behind one address honors it, and so does a restarted one, as long as each replica:
+
+- signs with the same key, from `secret` or `secret_file` (see [The secret](#the-secret));
+- configures the ALB under the same name, since a token is bound to it;
+- names the pool members alike, since a token refers to its member by name. A [discovered](/docs/routing/alb-autodiscovery/) member is named after its ALB and the member's discovered name, or its address when it has none, so replicas that discover the same members agree.
+
+Changing the key starts every session over once, since a token signed with the old key is no longer honored. The Kubernetes controller keys the ALBs it generates from a Secret; see [The session key](/docs/kubernetes/kubernetes-gateway/#the-session-key).
+
+In `table` mode each replica keeps its own table, and a client that reaches a replica that has not seen it before is balanced there as a new session. To keep such a client on its member anyway, either:
+
+- keep each client on one replica, with source-address affinity in whatever balances the replicas; or
+- use `mechanism: hrw` with `hrw.key` set to the same key as `table.key`. Every replica then sends a new session to the same member for as long as their pools agree, and a replica's table keeps the sessions it has seen in place when the pool changes. A replica that has not seen a session chooses its member afresh after such a change.
+
+`table.learn: response` learns a value only on the replica whose member set it, and the request that began that session had no value for `hrw` to hash, so it needs each client kept on one replica.
+
+#### Sticky Session Metrics
+
+`trickster_alb_sticky_total{alb_name, result}` counts requests, connections and native sessions by how their session fared: `hit` (sent to its member), `miss` (no token or table entry), `expired`, `invalid`, `repick` (its member was unavailable and it moved) and `rejected`. In table mode an expired entry counts as a `miss`. A request, connection or native session is counted once it reaches its member, or once it is refused; one that reaches no member, which the ALB answers `502 Bad Gateway` or closes, is not counted. `trickster_alb_sticky_entries{alb_name}` is the number of entries in an ALB's table.
+
+### WebSockets and Other Protocol Upgrades
+
+A request that asks to switch protocols, such as a WebSocket handshake, is tunneled by the pool member it is sent to when the ALB's mechanism sends each request to one member (`rr`, `p2c`, `lc`, `lt`, `hrw`) or is the [User Router](#user-router). The mechanisms that fan a request out (`fr`, `fgr`, `nlm`, `tsm`) have no one member to tunnel to, so they ignore the upgrade and serve the request as an ordinary one, as HTTP permits.
+
+### Load Balancing Stream Listeners
+
+The mechanisms that select one member, `rr`, `p2c`, `lc`, `lt` and `hrw`, also balance the connections of a `tcp` or `tls` [stream listener](/docs/getting-started/configuring/) and the sessions of a `udp` one. They are the same mechanisms with the same weights; only what they measure differs. The mechanisms that fan a request out (`fr`, `fgr`, `nlm`, `tsm`) and the User Router need an HTTP request, and are refused on a stream listener. Two more mechanisms, [`race` and `mirror`](#connect-race-and-udp-mirror), serve only stream listeners.
+
+| | http | tcp and tls | udp |
+|-----|-----|-----|-----|
+| unit of work | a request | a connection | a session: one client address and port |
+| in flight (`p2c`, `lc`, `lt`) | requests being served | connections open | sessions open |
+| latency (`lt.signal`) | `first_write`: the first byte sent to the client | `connect` (default): the time to connect to the member; or `first_byte`: the member's first byte | `first_reply`: the member's first datagram |
+| `hrw.key` | `client_ip`, `host`, `header:`, `cookie:`, `query:` | `client_ip`; `sni` on a `tls` listener; `proxy_tlv:<type>` with `proxy_protocol` | `client_ip` |
+
+A connection or session stays on the member it was given until it ends, whatever the mechanism. `client_ip` is the address a [PROXY protocol](/docs/getting-started/configuring/) header names when the listener trusts one. To keep a client's later connections on one member too, give the ALB a [`sticky`](#stream-and-native-listeners) block.
+
+Two settings apply only to an ALB that selects one member on a stream listener, under `alb.stream`:
+
+```yaml
+backends:
+  pg:
+    provider: alb
+    listener_names: [ postgres ]
+    alb:
+      mechanism: p2c
+      pool: [ pg1, pg2, pg3 ]
+      stream:
+        connect_retries: 1       # default 0
+        passive_health:          # off unless present
+          failures: 3            # default
+          eject: 30s             # default
+          max_ejected_percent: 50 # default
+```
+
+* `connect_retries` is how many other members a `tcp` or `tls` connection is offered when it cannot connect to the one it was given. All attempts share the listener's `stream.connect_timeout`. The default, 0, refuses the connection, which is what keeps a weighted split exact: a member under the reserved `.invalid` domain exists to refuse its share, and is never retried past. `udp` has no connect to fail, so it is not retried.
+* `passive_health` takes a member out of the pool after `failures` consecutive failed connects, for `eject`, without waiting for a health check. Only failures to reach the member count, never anything it sent. At most `max_ejected_percent` of the pool is out at once, and the last live member is never ejected. When `eject` ends the member returns, unless its health check has it down. On `udp`, where nothing connects, a member that answers a datagram with a port-unreachable is what counts as a failure.
+
+Health checks work as they do for HTTP pools: a `tcp://` member with a `healthcheck.interval` is probed by opening a connection to it. A `udp://` member has no generic probe; rely on [autodiscovery](/docs/routing/alb-autodiscovery/) readiness or on `passive_health`.
+
+#### Connect Race and UDP Mirror
+
+Two mechanisms exist only for stream listeners, because they commit one flow to several members at once. Both use every healthy member that has an address to dial, ignore `weight`, and take neither `connect_retries` nor `passive_health`. An ALB that uses one must be mapped to the stream listener directly; it cannot be a member of another ALB's pool.
+
+The **Connect Race** (`race`, or `connect_race`) mechanism serves `tcp` and `tls` listeners. Each client connection is connected to several members at once, within the listener's `stream.connect_timeout`; the first member to connect carries the connection, and the other attempts are closed. A member that is down or slow to accept costs the client nothing. `stream.race_width` is how many members are raced, from 2 to 8; the default is every member, up to 4. In a pool wider than the race, each connection starts one member further along, so the connects are shared across the pool. A race opens and discards connections on the members that lose, so use it where a connect is cheap for the member.
+
+The **UDP Mirror** (`mirror`, or `udp_mirror`) mechanism serves `udp` listeners. Every datagram a client sends is copied to every healthy member, which suits one-way protocols such as statsd, syslog and NetFlow. The first healthy member in pool order answers the session: only its replies are relayed to the client, and the other members' replies are discarded. A mirror pool has at most 8 members.
+
+```yaml
+backends:
+  statsd:
+    provider: alb
+    listener_names: [ statsd ]
+    alb:
+      mechanism: mirror
+      pool: [ statsd1, statsd2 ]
+  db:
+    provider: alb
+    listener_names: [ postgres ]
+    alb:
+      mechanism: race
+      pool: [ pg1, pg2, pg3 ]
+      stream:
+        race_width: 2
+```
+
+### Load Balancing Native Protocol Sessions
+
+A listener that speaks a backend's own wire protocol, such as a `mysql` [listener](/docs/time-series-caching/providers/mysql/), can map to an ALB that uses `rr`, `p2c`, `lc` or `hrw`. Each client session is committed to one pool member once it authenticates, and stays there until it ends; a session is the unit of work, so `p2c` and `lc` compare members by their open sessions. `hrw.key` is `client_ip` or `user`. `lt` is not available, since a session reports no latency to rank members by. Every pool member must be a backend of the listener's own provider, listed directly, and [autodiscovery](/docs/routing/alb-autodiscovery/) is not supported. The ALB authenticates the listener's clients, so it carries the `authenticator_name` that a [User Router](#user-router) on the same listener would.
+
+```yaml
+backends:
+  replicas:
+    provider: alb
+    listener_names: [ mysql ]
+    authenticator_name: mysql-clients
+    alb:
+      mechanism: lc
+      pool: [ replica1, replica2 ]
+```
+
+With a [`sticky`](#stream-and-native-listeners) block, a client's later sessions keep to the member its first one was given, by `client_ip` or, with `table.key: user`, by the name it authenticated as.
+
+### Weights and the Selection Mechanisms
+
+Every mechanism that selects one member per request honors the pool `weight`, but what a weight promises differs:
+
+| Mechanism | A weight is | Guarantee |
+|-----|-----|-----|
+| rr | a share of requests | exact: `weight` of every `totalWeight` consecutive requests |
+| p2c | a capacity | proportional on average: heavier members are drawn more often and compared by requests in flight per unit of weight |
+| hrw | a share of the keys | proportional on average over many keys; changing a weight moves as few keys as possible |
+| lc | a capacity | members are kept at equal requests in flight per unit of weight |
+| lt | a bias | the score is divided by the weight, which shifts load under contention; an idle pool still sends every request to its best-scoring member |
+
+If you need a guaranteed split, use `rr`.
+
 ### Time Series Merge
 
 The **Time Series Merge** mechanism supports both High Availability and federation. Each physical backend represents one logical data shard. Set the backend-level `replica_group` option to the same value on physical backends that are HA replicas of that shard. TSM first coalesces those replicas, using configured pool order to resolve overlapping points and later replicas to fill gaps, and then reduces the distinct logical shards.
@@ -113,6 +480,8 @@ Replica grouping is backend-global, not ALB-specific. A backend cannot be a repl
 If replicas disagree at the same logical point, the first configured member wins deterministically and Trickster records a conflict metric and warning log. A failed replica does not make a response partial when another replica covers its group. If an entire logical group is unavailable, the response is marked partial and includes a warning.
 
 For request paths that are not mergeable by the configured time series provider, TSM does not fan the request out. Those requests are dispatched directly to the first live pool target. The same first-live-target fallback is used when a request cannot be prepared for the merge path.
+
+By default, TSM merges the answers its members give to a query. A TSM ALB can instead read its members' raw series and evaluate each query once, the way Thanos does; see [Global Evaluation](#global-evaluation).
 
 #### Merge Strategy
 
@@ -134,12 +503,15 @@ For Federation use cases where backends hold different, non-overlapping data, Tr
 | `quantile` | Query the inner expression, merge all float samples globally, then calculate the exact quantile per timestamp and aggregation group |
 | `limit_ratio` | Apply Prometheus-compatible label-hash sampling, globally finalizing a supported inner aggregation when necessary |
 | `limitk` | Query the inner expression, merge it globally, then retain the first k samples in stable TSM series order per timestamp and aggregation group |
+| `count` or `group` over an inner `count` or `group` of a selector | Query the inner aggregation, union its label sets across backends, then count or group each label set once per timestamp and aggregation group |
 | `sum`, `count`, or `count_values` followed by `or vector(0)` | Sum of values per unique label set + timestamp |
 | _(none)_ | Deduplicate (default) |
 
 For `avg` queries, Trickster issues two concurrent sub-queries per backend shard — one rewriting the outer `avg` to `sum` and another to `count` — then computes a true weighted arithmetic mean (`sum_total / count_total`) per series per timestamp. This avoids the skew introduced by a naïve avg-of-averages when backends have different data cardinalities.
 
-When an outer aggregation's input contains a nested aggregation, binary expression, or function that needs globally complete input, Trickster retains the aggregation's established merge strategy and adds a warning. This fail-open behavior preserves correct results when the input series are colocated while noting that results can be inaccurate when matching series are split across shards.
+When an outer aggregation's input contains a nested aggregation (other than the `count` and `group` forms below), binary expression, or function that needs globally complete input, Trickster retains the aggregation's established merge strategy and adds a warning. This fail-open behavior preserves correct results when the input series are colocated while noting that results can be inaccurate when matching series are split across shards.
+
+For an outer `count` or `group` whose input is a `count` or `group` of a vector selector, such as `count(count by (pod) (up))`, the result depends only on which label sets the inner aggregation produces. Trickster sends the inner aggregation to each backend, unions the label sets the backends return, and applies the outer operator once per timestamp and aggregation group. A label set returned by several backends counts once, so replicated or partially overlapping backends don't inflate the count. The selector may use label matchers, `offset`, and `@`, and the aggregation may be wrapped in `sort()`, `sort_desc()`, or a literal scalar operation such as `> 1`. A label set counts at a timestamp when any backend returned it there. Inner inputs that apply functions, filters, or binary operations can change which label sets a backend returns, so they keep the warning described above. When a backend fails, the result covers the backends that answered and is marked as a partial hit.
 
 For `sum`, `count`, or `count_values` followed by `or vector(0)`, Trickster sends the complete expression to each backend and sums the results, because a backend without matching series contributes only the explicit zero. This requires an aggregation input that each backend can evaluate independently: no nested aggregation, binary expression, or function that needs globally complete input. When the `or` uses `on(...)` or `ignoring(...)` label matching, this applies only to `sum` or `count` without `by` or `without` grouping; other forms use the warning fallback described below.
 
@@ -159,7 +531,7 @@ For an unsupported inner expression, Trickster retains the established per-shard
 
 The same deduplicating fallback and warning apply when an aggregation is not the query's outermost operation (for example, `histogram_quantile(0.9, sum by (le) (rate(x_bucket[5m])))`), when an aggregation is combined with a binary expression other than the supported `or vector(0)` form, and when the query cannot be parsed as PromQL, such as a query that uses another dialect's extensions.
 
-When a non-dedup strategy is in effect and backends have [injected labels](/docs/time-series-caching/providers/prometheus/#injecting-labels) configured, those labels are automatically stripped before merging. This ensures series from different backends hash identically for aggregation, and the injected labels do not appear in the response.
+When a non-dedup strategy is in effect, or Trickster sends backends an inner expression to finalize after merging, and backends have [injected labels](/docs/time-series-caching/providers/prometheus/#injecting-labels) configured, those labels are automatically stripped before merging. This ensures series from different backends hash identically for aggregation, and the injected labels do not appear in the response.
 
 #### Native Histograms
 
@@ -168,6 +540,79 @@ Native histogram samples are preserved through the merge rather than being numer
 #### Max Query Range Limitation
 
 Trickster ALB supports enforcing a `max_query_range` duration on ALB backends. For details on how to configure and use query range limits, see the [Query Range Limits](/docs/time-series-caching/query-range-limits/) documentation.
+
+#### Step Alignment
+
+Members' responses combine at identical timestamps, so members must answer on one grid: a member that drops the partial bucket at the start while another returns it whole would merge into a series whose first points are summed over a subset of members. A `tsm` ALB therefore applies one [step alignment](/docs/time-series-caching/step-alignment/) mode to every member. It uses its own `step_alignment` when set; otherwise it uses its first configured member's mode, whether or not that member is healthy, so a leader's outage doesn't move every open dashboard's grid. A query's `trickster-step-align` directive wins when every member supports the mode it names.
+
+A static pool member that can't apply the chosen mode fails the configuration. When autodiscovered members can't, the pool uses `truncate` if every member supports it, or otherwise leaves each member to its own mode, and adds a warning to the merged response.
+
+`step_alignment` on an ALB using any other mechanism applies that mode to every member too, so the chart's shape doesn't depend on which member answered. Without it, those mechanisms leave members to their own modes, and Trickster logs a warning at startup for each ALB whose members differ.
+
+#### Members With a Series Limit
+
+Some managed services, such as [Amazon CloudWatch PromQL](/docs/backends/aws/#amazon-cloudwatch-promql), cut a query result short at a series limit and flag it with a warning. Each member applies its own limit, so a member's truncated result is proxied and never cached, while the other members' results are cached as usual. The merged response then covers only the series each member returned, and it carries the truncation warning so the client can tell.
+
+#### Global Evaluation
+
+Merging members' answers is exact only for queries whose aggregation can be split across shards, as described in [Merge Strategy](#merge-strategy). A query such as `sum(rate(x[5m]))` over replicas that differ by a label, or `histogram_quantile(...)` over buckets split across members, needs every raw sample in one place. With `tsm.evaluation: global`, a TSM ALB answers each instant and range query the way Thanos Querier does: it reads the raw series the query selects from every member, deduplicates replicas, and evaluates the whole expression once in an embedded Prometheus engine.
+
+```yaml
+backends:
+  mimir-east:
+    provider: prometheus
+    origin_url: http://mimir-east:8080/prometheus
+    prometheus:
+      flavor: mimir
+  mimir-west:
+    provider: prometheus
+    origin_url: http://mimir-west:8080/prometheus
+    prometheus:
+      flavor: mimir
+  mimir-global:
+    provider: alb
+    cache_name: default
+    alb:
+      mechanism: tsm
+      tsm:
+        evaluation: global        # merge (the default) or global
+        replica_labels: [replica] # labels that tell copies of one series apart; no default
+        deduplication: penalty    # penalty (the default) or chain
+        partial_response: true    # the default
+        max_samples: 50000000     # the default
+        query_timeout: 2m         # the default
+        max_concurrent_queries: 20 # the default
+        max_fetched_series: 0     # the default, unlimited
+        max_fetched_samples: 0    # the default, unlimited
+        raw_cache_window: 31d     # the default
+      pool:
+        - mimir-east
+        - mimir-west
+```
+
+The evaluation is set per ALB, and covers every query the ALB receives; other TSM ALBs keep merging. Requests for other paths, such as labels and series, are merged as usual. The settings below `evaluation` are valid only with `evaluation: global`.
+
+**Members.** Every pool member must be a `prometheus` backend with a [series source](/docs/time-series-caching/providers/prometheus/#series-sources): `flavor: mimir` reads Prometheus remote read, `flavor: thanos` reads Thanos StoreAPI at the member's `series_endpoint`, and any other Prometheus backend can set `series_api`. Configuration fails for any other member, including a nested ALB. With [autodiscovery](/docs/routing/alb-autodiscovery/#template-backends), the `template_backend` must be such a backend. A template's `series_endpoint`, including the one StoreAPI requires, is used unchanged by every discovered member, so every member reads that one store and Trickster logs a warning at startup; remote read without a `series_endpoint` instead reads each member's own origin. A discovery `query.scheme` of `tcp` or `udp` gives no such origin and fails configuration, and a discovered member whose series endpoint still can't be formed is logged and left out of the pool. Every live member is read, whatever its `replica_group`. Each read reuses the member's TLS settings, and carries the client's request headers and the member path's `request_headers`.
+
+**Deduplication.** Series whose labels match once `replica_labels` are removed are replicas of one series, and the result keeps one series per such label set, without the replica labels. `deduplication: penalty` follows Thanos: it reads one replica until that replica falls silent for twice its sampling interval, then switches to another. When the query reads the series through `rate`, `increase`, `irate` or `resets`, a switch to a replica whose counter is behind is adjusted so that it doesn't read as a counter reset. When replicas sample at the same instant, the earliest-configured member's replica is read first. `deduplication: chain` instead keeps every distinct timestamp across replicas, and the earliest-configured member's value where they share one. Series with identical labels from different members are always combined like `chain`. Leaving `replica_labels` empty still combines identical series. A native histogram's counter reset hint describes its change from the previous sample of its own source, so where deduplication moves to another replica or copy, or passes over samples, the hint is cleared and the engine finds any reset from the counts, as Prometheus does where it merges series.
+
+**Partial responses.** When a member is unavailable or fails to answer, by default the result is evaluated over the members that answered, and carries a warning naming the member, as Thanos does with partial responses enabled. Why the member failed is logged rather than returned, since a transport error can name internal hosts. Set `partial_response: false` to fail such a query with a 503 instead, as soon as a member fails, stopping the reads of the others. A request's `partial_response` parameter overrides the ALB's setting. A failed evaluation is returned as a Prometheus API error, never replaced by a merged answer.
+
+**Limits.** `max_samples` bounds the samples the engine holds at once, like Prometheus's `--query.max-samples`. `query_timeout` bounds an evaluation from its arrival, including any wait for one of the ALB's `max_concurrent_queries` slots; a request's `timeout` parameter can shorten it. `max_fetched_series` and `max_fetched_samples` bound the raw series and samples one evaluation reads from all its members before deduplication: the samples each selector reads within its range, whether from a member or the raw series cache, and the series with any such sample. What the raw series cache serves for a selector is counted before any member is read for it, and what members send as their answers arrive, so a read stops as soon as its samples and the cache's pass the allowance. As a member's series are mostly those the cache serves too, a read counts series only past as many as the cache served, and each selector's exact count is settled once its answer is assembled. A series counts once for each selector and member, however many frames, messages, or uncached time ranges carry it. With `max_fetched_series` set, series are told apart by a hash of their labels as they arrive, so a copy of a series that a member sends apart from the rest of it counts once too; without it, such a copy may count again. A read stops as soon as the evaluation's allowance runs out, and a read several evaluations share counts against each of them, stopping only when none can afford more. Each member's raw response, and each StoreAPI message or remote-read frame in it, is bounded by the ALB's [`max_capture_bytes`](#bounding-per-member-response-captures). Only the chunks and samples within a selector's range are kept from a response, and what is kept from one response, with the buckets its native histogram chunks lay out as they are read, may take at most four times `max_capture_bytes` in memory once decoded, so a response can't expand far past its size even when the fetch limits are unlimited. Deduplication reads every copy and replica of a series at once, so the buckets their chunks lay out count together. Responses of float chunks stay within that bound; native histograms expand more, integer ones sent as samples to around eight times their size, so a response of them can reach it before `max_capture_bytes`. A histogram chunk whose bucket layout declares more buckets than its data holds is refused as malformed, as is one whose samples couldn't be read: spans offset back after the first, in a schema finer than the engine reads, or custom-bucket spans offset back, on the negative side, or reaching past their bounds. A histogram sent as a sample is refused for the same layouts, and for spans laying out more or fewer buckets than it holds. `max_capture_bytes` also bounds the result an evaluation encodes as its response, whether or not the result can be cached: encoding stops as soon as the result passes it, and the query fails whole with `execution`, never returning part of the result. A failed evaluation's error stays within it too, or within 4 KiB when that is more, leaving out warnings and shortening its message as needed. A result takes some 15 to 35 bytes of JSON for each sample it returns, where members' chunk-encoded reads often take one or two, so an ALB that returns raw series over wide ranges needs a `max_capture_bytes` sized for its results as well as its members' reads. A query that reaches one of these limits or times out fails, even when partial responses are allowed; a limit a member enforces itself, such as Mimir's query limits, is that member's failure. Errors use Prometheus's types and status codes: `bad_data` (400), `execution` (422, which includes the limits), `canceled` (499), `internal` (500), and `timeout` or `unavailable` (503). Once a member's read of one of a query's selectors reaches a limit, the other members' reads of that selector stop, and the query fails with `execution`, even when any other of its reads also failed, of that selector or another, or it also timed out or its client canceled it as the limit was reached.
+
+**The engine.** The engine is the Prometheus version Trickster is built with, with a 5-minute lookback, the `@` modifier, negative offsets and the experimental functions enabled, a 1-minute step for subqueries that name none, and at most 11,000 points per series. The query's `limit` parameter is honored. A request is validated as Prometheus validates it before any cache lookup or raw read, except that a range query's `step` must be a whole number of milliseconds, the engine's resolution, rather than be evaluated at another step; a `timeout` must be positive, a `limit` a non-negative integer, and `partial_response` a boolean.
+
+**Caching.** A global ALB keeps each complete evaluation in its own `cache_name` (`default` when unset), whole. Its range queries are not delta-cached, as a Prometheus backend's are: penalty deduplication follows replicas from a range's first sample, so samples evaluated as part of a range can differ from the same samples evaluated with the whole of it. A cached result answers only the same query with the same time, or the same start, end and step, so a dashboard's moving range is evaluated each time, while repeats and concurrent viewers are answered from the cache. A result that reaches into the recent past, within the 5-minute lookback or the ALB's `volatile_window`, is kept for up to 30 seconds, while samples may still arrive; an older one is kept for the ALB's `timeseries_ttl`. A partial result or a failed evaluation is never cached, and is answered with `Cache-Control: no-store`.
+
+The cache key holds the query's `limit`, and its `timeout` and `partial_response` resolved against the ALB's settings, so requests that share a result or an evaluation agree on how it ends. It also holds the `Authorization` header, the `X-Scope-OrgID` and `THANOS-TENANT` tenant headers, the `cache_key_headers`, `cache_key_params` and `cache_key_form_fields` configured on the ALB's query paths and on the ALB path a request arrives on, such as an alias like `/prometheus/api/v1/query_range`, and the `cache_key_headers` configured on its members' query paths, so no tenant or scope reads another's results. Results are kept under a namespace that digests the ALB's members, in order, with each one's series endpoint, the request headers its query paths send, and its TLS client and SigV4 settings. The namespace changes when membership does, as when a discovery adds or removes a member, and when a member's configuration does, but not with health, so results kept before a member's outage stay usable. A request's evaluation reads the members whose namespace keys its result, even when the pool changes while it runs.
+
+**Raw series caching.** Beneath its results, a global ALB with a cache also keeps the raw series it reads, so each member is read only for samples the cache doesn't hold. A member's series are kept per selector, in two-hour blocks aligned to the epoch, keyed by the member's series endpoint and configuration (as for the namespace above), the selector's matchers, and the identity headers that key results, as the member receives them. Samples within a member's volatile window are read from it by every evaluation and never kept, since replicas' samples may still arrive; older samples are read once and kept for the ALB's `timeseries_ttl`. A dashboard's moving range therefore reads only its newest minutes from each member, and a wider range reads only the part the cache lacks. The volatile window is 5 minutes for members with `flavor: mimir` or `flavor: thanos`, and none for other members; an ALB that sets `volatile_window` uses it for every member instead, so set it to cover any out-of-order window your members accept. Samples older than `raw_cache_window`, 31 days by default, aren't kept either: a range reaching further back reads that older part from the members every time, and the rest from the cache. The window counts whole blocks, and each block a range spans is one cache lookup per selector and member. A selector with an exact metric name can also be answered from the cached blocks of a broader one on the same metric, member and identity, whose matchers are all among its own: `up{job="api",code=~"5.."}` from `up{job="api"}`'s blocks, filtered to the series it matches. Each Trickster instance remembers in memory which selectors have cached blocks; nothing more is stored. Concurrent evaluations needing the same samples share one read, and a selector's missing ranges are read from a member a few at a time. Every chunk of a member's answer is read through, and the bucket layout of every histogram in it checked, whether the answer arrives as chunks or as samples, before it is kept, so a chunk or histogram that can't be read fails that member's read rather than being cached. An answer a member gave incompletely, or failed to give, is never kept. If keeping an answer fails anyway, the evaluations that read it already have their answer, the failure is logged, and its samples are read from the member next time; a cached block that fails as they are merged into it is dropped, and its samples are read again too. The ALB's `max_object_size_bytes`, 64 MB by default for a TSM ALB, bounds each block as it bounds each cached result: samples that would take a block past it aren't kept, so they are read from the members every time while the block keeps what it held. A block refused some samples isn't tried with them again until `timeseries_ttl` passes, unless it no longer holds what it held then, as once evicted, when they may fit; each refusal counts in `trickster_cache_events_total` as event `error` with reason `tsm_global_raw_max_object_size`. Blocks are keyed by the limit too, so ALBs of different limits sharing a cache keep their own, and changing the limit starts new blocks while the old ones expire. A `memory` cache measures a block by the memory it holds, and other caches by its encoded size. The small chunks that frequent refreshes add to a block are encoded again into full ones as they accumulate, so a block kept current every few seconds ends as compact as one read whole. Each selector reads exactly the samples from its start to its end, cached or not, so cached and uncached evaluations agree, and penalty deduplication starts at a selector's first sample.
+
+Concurrent requests for the same result share one evaluation. The request that starts it owns it: when its client goes away, the evaluation and its raw reads are canceled, and a request that joined it runs the query again.
+
+**Reloads and shutdown.** A configuration reload leaves the replaced ALB's evaluations running for the `reload_drain_timeout`. Then that ALB admits no more evaluations and cancels those still running, which are answered `unavailable` (503) unless one already failed with `execution`, as on reaching a limit, which decides its answer as it would a timeout's, and waits up to the same timeout again for raw series blocks still being stored; nothing a raw read returns from then on is stored. Only after that are its members' StoreAPI connections closed, discovered members' included. A `memory` or `redis` cache that the new configuration changes or removes, and that a replaced global ALB keeps its results in, is closed after that too, so the blocks still being stored reach it; until then, a `memory` cache's objects stay in memory alongside those of the cache replacing it. A cache that keeps its objects in local files (`filesystem`, `bbolt`, `badger`) is closed as the reload applies, since its replacement can open the same files, so it refuses what the replaced ALB stores in it during the drain. A changed or removed cache that no global ALB uses is closed as the reload applies too, once the operations under way in it end, whatever its provider. A reload that fails restores the previous ALB, which keeps reading its discovered members over the connections it already has. Shutdown does the same once the listeners have drained: retiring the evaluators and closing the caches share one `shutdown_drain_timeout`. A discovered member that autodiscovery removes or rebuilds has its StoreAPI connection closed once the `reload_drain_timeout` passes, and one it refuses as it builds it, at once.
+
+Reading raw series moves much more data than reading answers, as it does in Thanos: plan `max_capture_bytes` and the fetch limits for the widest dashboard ranges. To compare global evaluation with Thanos or with merging, see the `mimir` and `thanos` profiles of the [developer environment](https://github.com/trickstercache/trickster/blob/main/docs/developer/environment/README.md#mimir-and-thanos-details).
 
 #### Providers Supporting Time Series Merge
 
@@ -206,7 +651,7 @@ backends:
     provider: alb
     max_query_range: 14d
     alb:
-      mechanism: tsm # time series merge
+      mechanism: tsm # or time_series_merge
       pool: 
         - prom01a
         - prom01b
@@ -266,7 +711,7 @@ backends:
   node-alb-fr:
     provider: alb
     alb:
-      mechanism: fr # first response
+      mechanism: fr # or first_response
       pool:
         - node01
         - node02
@@ -284,7 +729,7 @@ This mechanism is useful in applications such as live internet television. Consi
 
 #### Custom Good Status Codes List
 
-By default, fgr will return the first response with a status code < 400. However, you can optionally provide an explicit list of good status codes using the `fgr.status_codes` configuration setting, as shown in the example below. When set, Trickster will return the first response to be returned that has a status code found in the configured list.
+By default, fgr will return the first response with a status code < 400. However, you can optionally provide an explicit list of good status codes using the `fgr.status_codes` configuration setting, as shown in the example below. When set, Trickster will return the first response to be returned that has a status code found in the configured list. An entry may be a single code or an inclusive range, and the two forms mix: `status_codes: [ { start: 200, end: 299 }, 304 ]`.
 
 #### First Good Response Configuration Example
 
@@ -306,7 +751,7 @@ backends:
   node-alb-fgr:
     provider: alb
     alb:
-      mechanism: fgr # first good response
+      mechanism: fgr # or first_good_response
       pool:
         - node01
         - node02
@@ -343,7 +788,7 @@ backends:
   node-alb-nlm:
     provider: alb
     alb:
-      mechanism: nlm # newest last modified
+      mechanism: nlm # or newest_last_modified
       pool:
         - node01
         - node02
@@ -382,7 +827,7 @@ backends:
     provider: alb
     authenticator_name: dbUsers
     alb:
-      mechanism: ur # User Router Mechanism
+      mechanism: ur # or user_router
       user_router: # User Router-specific configs
         default_backend: readersBackend # optional - users not in the list will route here, origin will 401
         users:
@@ -492,6 +937,8 @@ backends:
 
 The ALB-level value takes precedence over the backend-level value, which in turn takes precedence over the 256 MiB default.
 
+A TSM ALB with [`evaluation: global`](#global-evaluation) applies the cap to each member's raw series response and to the result each evaluation encodes as its response. Unlike the fanout mechanisms above, it doesn't treat a member's response over the cap as a partial failure: the whole query fails with a Prometheus `execution` error (422), even when partial responses are allowed, with no `X-Trickster-Result: phit` marker and no `truncated` count in `trickster_alb_fanout_failures_total`. A result that would exceed the cap fails with the same error rather than being returned in part.
+
 ### Bounding Aggregate In-Flight Captures
 
 `max_capture_bytes` caps each member's response individually; a fanout to N members can still buffer up to `N * max_capture_bytes` in flight. For deployments with large pools or low memory ceilings, set `max_fanout_capture_bytes` to cap the aggregate buffer across all in-flight slots in a single fanout call. Slots dispatched after the aggregate budget would go negative are fail-fasted (marked `Failed`, no capture buffer allocated) before the upstream handler runs; the merge sees them as partial failures and the existing fallback path handles it.
@@ -515,7 +962,7 @@ backends:
 
 ## Maintaining Healthy Pools With Automated Health Check Integrations
 
-Health Checks are configured per-Backend as described in the [Health documentation](/docs/backends/health/). Each Backend's health checker will notify all ALB pools of which it is a member when its health status changes, so long as it has been configured with a [health check interval](/docs/backends/health/#example+health+check+configuration+for+use+in+alb) for automated checking. When an ALB is notified that the state of a pool member has changed, the ALB will reconstruct its list of healthy pool members before serving the next request.
+Health Checks are configured per-Backend as described in the [Health documentation](/docs/backends/health/). Each Backend's health checker will notify all ALB pools of which it is a member when its health status changes, so long as it has been configured with a [health check interval](/docs/backends/health/#example-health-check-configuration-for-use-in-alb) for automated checking. When an ALB is notified that the state of a pool member has changed, the ALB will reconstruct its list of healthy pool members before serving the next request.
 
 ## Health Check States
 
@@ -525,9 +972,77 @@ A backend will report one of three possible health states to its ALBs: `unavaila
 
 Each ALB has a configurable `healthy_floor` value, which is the threshold for determining which pool members are included in the healthy pool, based on their instantaneous health state. The `healthy_floor` represents the minimum acceptable health state value for inclusion in the healthy pool. The default `healthy_floor` value is `0`, meaning Backends in a state `>= 0` (`unknown` and `available`) are included in the healthy pool. Setting `healthy_floor: 1` would include only `available` Backends, while a value of `-1` will include all backends in the configured pool, including those marked as `unavailable`.
 
-Backends that do not have a [health check interval](/docs/backends/health/#example+health+check+configuration+for+use+in+alb) configured will remain in a permanent state of `unknown`. Backends will also be in an `unknown` state from the time Trickster starts until the first of any configured automated health check is completed. A pool member in a permanent `unknown` state can never reach `available`, so a `healthy_floor: 1` ALB whose members lack health checks would have an empty pool and return `502` for every request. To avoid that, Trickster resets such an ALB's effective floor to `0` at startup, emits a warning naming the ALB and the un-probed members, and sets the `trickster_alb_pool_floor_reset{backend_name}` gauge to `1`. Configure a health check interval on those members if you want `healthy_floor: 1` to apply.
+Backends that do not have a [health check interval](/docs/backends/health/#example-health-check-configuration-for-use-in-alb) configured will remain in a permanent state of `unknown`. Backends will also be in an `unknown` state from the time Trickster starts until the first of any configured automated health check is completed. A pool member in a permanent `unknown` state can never reach `available`, so a `healthy_floor: 1` ALB whose members lack health checks would have an empty pool and return `502` for every request. To avoid that, Trickster resets such an ALB's effective floor to `0` at startup, emits a warning naming the ALB and the un-probed members, and sets the `trickster_alb_pool_floor_reset{backend_name}` gauge to `1`. Configure a health check interval on those members if you want `healthy_floor: 1` to apply.
 
 Setting `healthy_floor` below `0` admits members the probe has confirmed `unavailable`, not just members in the transient `unknown` state. If your goal is to keep traffic flowing during the cold-start window before the first probes complete, lower the pool members' `recovery_threshold` so they transition out of `unknown` faster -- don't lower the floor. When `healthy_floor < 0` Trickster emits a startup warning and sets the `trickster_alb_pool_admits_failing{backend_name}` gauge to `1`.
+
+### Backup Pool Members
+
+A pool member marked `backup: true` stands by: it receives traffic only while no other member of the pool is in the healthy pool. As soon as one of the other members returns, the backup members stand down again, apart from the [sticky sessions](#sticky-sessions) they took meanwhile, which stay with them until they end. This applies to every mechanism that has a pool, and to stream and native protocol listeners as well as HTTP. A pool must have at least one member that is not a backup, unless its other members come from [autodiscovery](/docs/routing/alb-autodiscovery/); discovered members are never backups.
+
+```yaml
+backends:
+  db:
+    provider: alb
+    listener_names: [ postgres ]
+    alb:
+      mechanism: rr
+      healthy_floor: 1
+      pool:
+        - primary
+        - name: standby
+          backup: true
+```
+
+Failover depends on the ALB learning that its other members are down, so give them a [health check interval](/docs/backends/health/#example-health-check-configuration-for-use-in-alb) or, on a stream listener, `stream.passive_health`. While an ALB with backup members is dispatching to them, the `trickster_alb_pool_on_backup{backend_name}` gauge is `1`, and a warning is logged when it fails over.
+
+### Draining Pool Members
+
+A pool member marked `drain: true` takes no new work but keeps the [sticky sessions](#sticky-sessions) it already has, for as long as it is available, so that it can be retired without ending them. Every mechanism leaves a draining member out when it selects a member or fans a request out; only a sticky session can reach it. A pool must have at least one member that is not draining, unless its other members come from [autodiscovery](/docs/routing/alb-autodiscovery/). When every member of the primary tier drains, new work goes to the [backup members](#backup-pool-members).
+
+Draining ends no session by itself: a session keeps its draining member until its `ttl` or `idle` ends it, the member leaves the pool, or the member becomes [unavailable](#when-the-pinned-member-is-unavailable). To retire a member without cutting sessions short, keep it draining until they end: a session lasts at most `ttl`, and ends sooner once unused for `idle`.
+
+Discovered members drain too: a Kubernetes endpoint that is terminating but still serving, or a deleted pod that is still ready, stays in the pool as a draining member until it stops serving, so a rolling restart moves new sessions to the new pods while the old ones finish theirs. See [autodiscovery](/docs/routing/alb-autodiscovery/#zero-error-rolling-deploys). This applies to every discovered pool, sticky or not.
+
+Draining members are listed on the [health status page](#all-backends-health-status-page) and exported by the `trickster_alb_member_draining{alb_name, member}` gauge, which is `1` for each draining member.
+
+A [Time Series Merge](#time-series-merge) ALB, which keeps no sessions, merges nothing from a draining member. Draining the only live member of a `replica_group` therefore leaves that shard out of its merged results, and the ALB warns of a degraded pool, as it would had the member failed.
+
+```yaml
+backends:
+  app:
+    provider: alb
+    alb:
+      mechanism: rr
+      sticky: {}
+      pool:
+        - app1
+        - app2
+        - name: app3
+          drain: true
+```
+
+### ALBs as Pool Members
+
+An ALB that is a member of another ALB's pool is always treated as `available`, even when its own healthy pool is empty: it keeps its share of the outer pool's traffic and fails it. That is deliberate for weighted splits, where an empty member must not shift its share onto its siblings. Set `propagate_health: true` on the inner ALB to change that. It then reports `unavailable` to the pools it belongs to while it has no healthy member, and `available` otherwise, so an outer pool whose `healthy_floor` excludes `unavailable` members sends that share to its other members instead.
+
+```yaml
+backends:
+  region-east:
+    provider: alb
+    alb:
+      mechanism: rr
+      propagate_health: true
+      pool: [ east1, east2 ]
+  global:
+    provider: alb
+    alb:
+      mechanism: rr
+      pool:
+        - region-east
+        - name: region-west
+          backup: true
+```
 
 ### Example ALB Configuration Routing Only To Known Healthy Backends
 
@@ -559,7 +1074,7 @@ backends:
 
 Trickster 2.x provides a global health status page available at `http://trickster:metrics-port/trickster/health` or (the configured `health_handler_path`).
 
-The global status page will display the health state about all backends configured for automated health checking. Here is an example configuration and a possible corresponding status page output:
+The global status page will display the health state about all backends configured for automated health checking, and every ALB with its pool members. Here is an example configuration and a possible corresponding status page output:
 
 ```yaml
 backends:
@@ -574,57 +1089,99 @@ backends:
     healthcheck:
       interval: 1000ms # enables automatic health check polling every 1s
 
-  flux-01:
-    provider: inflxudb
-    origin_url: http://flux01.example.com:8086
+  prom-02:
+    provider: prometheus
+    origin_url: http://prom02.example.com:9090
     healthcheck:
-      interval: 1000ms # enables automatic health check polling every 1s
+      interval: 1000ms
+
+  prom-03:
+    provider: prometheus
+    origin_url: http://prom03.example.com:9090
+    healthcheck:
+      interval: 1000ms
+
+  prom-alb:
+    provider: alb
+    alb:
+      mechanism: rr
+      pool:
+        - prom-01
+        - prom-02
+        - name: prom-03
+          drain: true
 ```
 
 ```text
 $ curl "http://${trickster-fqdn}:8481/trickster/health"
 
-Trickster Backend Health Status            last change: 2020-01-01 00:00:00 UTC
+Trickster Backend Health Status            last change: 2026-09-26 00:00:00 UTC
 -------------------------------------------------------------------------------
 
-prom-01      prometheus   available
+prom-02    prometheus     unavailable since 2026-09-26 00:00:00 UTC
 
-flux-01      influxdb     unavailable since 2020-01-01 00:00:00 UTC
-                                    
-proxy-01     proxy        not configured for automated health checks
+prom-01    prometheus     available
+prom-03    prometheus     available
+prom-alb   alb (rr)       available u:[prom-02] a:[prom-01,prom-03] d:[prom-03]
+
+proxy-01   reverseproxy   not configured for automated health checks
 
 -------------------------------------------------------------------------------
-You can also provide a 'Accept: application/json' Header or query param ?json
+For JSON, provide a 'Accept: application/json' Header or query param ?json
+For YAML, provide a 'Accept: application/yaml' Header or query param ?yaml
 ```
+
+### ALB Pool Members on the Status Page
+
+Each ALB is listed with its pool members grouped by health: `u:[...]` (unavailable), `a:[...]` (available) and `nc:[...]` (not checked) in the text form, and `unavailablePoolMembers`, `availablePoolMembers`, `uncheckedPoolMembers` and `initializingPoolMembers` in the JSON and YAML forms. [Draining](#draining-pool-members) members are also listed under their health, and again in `d:[...]` (text) or `drainingPoolMembers` (JSON and YAML). An ALB is listed as available while its pool has a member it would send new work to: one that meets its `healthy_floor`, is not draining, and is in the tier in use. An ALB whose members all drain is therefore unavailable, whatever their health, although it still serves their sticky sessions. In the example, `prom-alb` is available because `prom-01` takes new work; were `prom-01` down too, it would be listed as unavailable while `prom-03` went on serving the sessions pinned to it.
 
 ### JSON Health Status
 
-As the table footer from the plaintext version of the health status page indicates, you may also request a JSON version of the health status for machine consumption. The JSON version includes additional detail about any Backends marked as `unavailable`, and is structured as follows:
+As the footer of the plaintext version of the health status page indicates, you may also request a JSON or YAML version of the health status for machine consumption. The JSON version includes additional detail about any Backends marked as `unavailable`, and is structured as follows:
 
 ```bash
 $ curl "http://${trickster-fqdn}:8481/trickster/health?json" | jq
 
 {
   "title": "Trickster Backend Health Status",
-  "updateTime": "2020-01-01 00:00:00 UTC",
-  "available": [
-    {
-      "name": "flux-01",
-      "provider": "influxdb"
-    }
-  ],
+  "updateTime": "2026-09-26 00:00:00 UTC",
   "unavailable": [
     {
-      "name": "prom-01",
+      "name": "prom-02",
       "provider": "prometheus",
-      "downSince": "2020-01-01 00:00:00 UTC",
-      "detail": "error probing target: dial tcp prometheus:9090: connect: connection refused"
+      "downSince": "2026-09-26 00:00:00 UTC",
+      "detail": "error probing target: dial tcp prom02.example.com:9090: connect: connection refused"
+    }
+  ],
+  "available": [
+    {
+      "name": "prom-01",
+      "provider": "prometheus"
+    },
+    {
+      "name": "prom-03",
+      "provider": "prometheus"
+    },
+    {
+      "name": "prom-alb",
+      "provider": "alb",
+      "mechanism": "rr",
+      "availablePoolMembers": [
+        "prom-01",
+        "prom-03"
+      ],
+      "unavailablePoolMembers": [
+        "prom-02"
+      ],
+      "drainingPoolMembers": [
+        "prom-03"
+      ]
     }
   ],
   "unchecked": [
     {
       "name": "proxy-01",
-      "provider": "proxy"
+      "provider": "reverseproxy"
     }
   ]
 }
