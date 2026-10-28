@@ -157,7 +157,22 @@ backends: they are never routed, cannot be `is_default`, cannot appear in
 a static ALB pool, and do not require an `origin_url`. A template must
 use an origin-serving provider (not `alb` or `rule`), and a TSM-merged or
 `replica_group_label`-using ALB requires a time-series-merge-capable
-template provider.
+template provider. A TSM ALB with `evaluation: global` requires a
+`prometheus` template with a
+[series source](/docs/time-series-caching/providers/prometheus/#series-sources). Discovery replaces only
+the origin, so a template's `series_endpoint`, including the one Thanos
+StoreAPI requires, is used unchanged by every discovered member: each
+member reads that same store, and each read counts separately against
+`max_fetched_series` and `max_fetched_samples`. A pool of sharded Thanos
+sidecars discovered this way therefore reads only the one shard the
+endpoint names, and Trickster logs a warning at startup for any such
+template. Global evaluation over discovered members suits remote read
+without a `series_endpoint`, as with `flavor: mimir`, which reads
+`/api/v1/read` beneath each member's own origin. That origin must be
+`http` or `https`, so a `query.scheme` of `tcp` or `udp` fails
+configuration, and a discovered member whose endpoint still can't be
+formed is logged and not added to the pool. See
+[Global Evaluation](/docs/routing/alb/#global-evaluation).
 
 ### The `alb.discovery` Block
 
@@ -192,17 +207,26 @@ one whose readiness the provider does not convey, waits for its first
 passing probe as before.
 
 In `provider` mode, readiness reported by the discoverer maps onto member
-health: ready members enter as passing (1), not-ready and terminating
+health: ready and terminating members enter as passing (1), not-ready
 members as failing (-1), readiness-unknown members as unchecked (0) — so a
 `healthy_floor` of 1 excludes members until the provider reports them
 ready.
 
-Members a provider reports as shutting down (terminating Kubernetes
-endpoints, deletion-stamped pods) are removed from the snapshot entirely,
-so they drain from the pool *before* the workload is killed — enabling
-zero-error rolling deploys. On removal, a member's in-flight requests
-complete, its health check stops, its metrics series are deleted, and its
-idle upstream connections close after the configured drain timeout.
+Members a provider reports as shutting down but still serving (terminating
+Kubernetes endpoints whose `serving` condition holds, deletion-stamped pods
+that are still ready) stay in the pool as
+[draining](/docs/routing/alb/#draining-pool-members) members: from the moment the
+change is observed they take no new requests, connections or sessions, while
+[sticky sessions](/docs/routing/alb/#sticky-sessions) already pinned to them keep
+reaching them for as long as they are available. Once the provider reports
+that a member no longer serves, it is removed from the snapshot, *before*
+the workload is killed — enabling zero-error rolling deploys. On removal, a
+member's in-flight requests complete, its health check stops, its metrics
+series are deleted, and its idle upstream connections close after the
+configured drain timeout. Draining members count toward `min_members` and
+`trickster_alb_discovery_members`, and are shown on the
+[health status page](/docs/routing/alb/#all-backends-health-status-page) and by the
+`trickster_alb_member_draining` gauge.
 
 ### TSM Replica Groups
 
@@ -364,9 +388,10 @@ the discoverer keeps watching for the API server to come back.
 
 ### Query Kinds
 
-**`endpointslices`** (default) discovers the ready endpoint addresses of a
-named Service — the pod IPs behind it — and is the right choice for
-routing around the Service's own load balancing:
+**`endpointslices`** (default) discovers the endpoint addresses of a named
+Service — the pod IPs behind it — and is the right choice for routing
+around the Service's own load balancing. Terminating endpoints that still
+serve join as draining members:
 
 ```yaml
 query:
@@ -413,8 +438,9 @@ annotation on the watched Service/Pod, selects `https`; the default is
 
 ### Zero-Error Rolling Deploys
 
-Terminating endpoints are removed from the discovered membership as soon
-as the change is observed, so members drain out ahead of pod deletion.
+Terminating endpoints stop taking new work as soon as the change is
+observed: they drain, keeping only their sticky sessions, and leave the
+discovered membership once they stop serving, ahead of pod deletion.
 One piece belongs to the workload, though: Kubernetes marks an endpoint
 `terminating` and signals the container at the same moment, so — as with
 any EndpointSlice consumer, kube-proxy included — the pod must keep

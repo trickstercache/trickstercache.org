@@ -8,6 +8,8 @@ The Rule Backend is not really a true Backend; it only routes inbound requests t
 
 A Rule is a single inspection operation performed against a single component of an inbound request, which determines the Next Backend to send the request to. The Next Backend can also be a rule Backend, so as to route requests through multiple Rules before arriving at a true Backend destination.
 
+A request that asks to switch protocols, such as a WebSocket handshake, is tunneled by the backend the rule sends it to.
+
 A rule can optionally rewrite multiple portions of the request before, during and after rule matching, by using [request rewriters](/docs/request-handling/request_rewriters/), which allows for powerful and limitless combinations of request rewriting and routing.
 
 ## Rule Parts
@@ -44,11 +46,13 @@ Optional Rule Parts
 | hostname      | example.com                                          |
 | port          | 8480 (inferred from scheme when no port is provided) |
 | path          | /path1/path2                                         |
-| params        | ?param1=value                                        |
+| params        | param1=value                                         |
 | param         | (must be used with input_key as described below)     |
 | header        | (must be used with input_key as described below)     |
 | has_param     | true or false: whether the query parameter named by input_key is present, even if empty |
 | has_header    | true or false: whether the header named by input_key is present, even if empty |
+
+For a client request, `url`, `scheme`, `host`, `hostname` and `port` describe the URL the client requested: the `Host` header supplies the host and port, and the scheme is `https` when the request arrived over TLS.
 
 ### input_type permitted values and operations
 
@@ -187,3 +191,5 @@ backends:
 ```
 
 For `input_source: path`, matching uses Go's decoded `URL.Path`. For example, `%7Bmylabel%3D%22abc%22%7D` is matched as `{mylabel="abc"}` and `${tenant}` expands to `abc`. `${0}` represents the complete regex match, while `${1}` represents the first capture group. See [Request Rewriters](/docs/request-handling/request_rewriters/#regex-capture-tokens) for token lifetime and safety details.
+
+When the destination hostname is a DNS SRV owner name, the destination backend can resolve it with [`origin_resolution.mode: srv`](/docs/backends/origin-resolution/), which takes the port from the SRV answer, so one backend can reach many origins.

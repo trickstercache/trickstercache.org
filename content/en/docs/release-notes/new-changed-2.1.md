@@ -1,7 +1,7 @@
 ---
 title: "Trickster 2.1"
 linkTitle: "What's New in 2.1"
-weight: 10
+weight: 20
 ---
 
 Trickster 2.1 adds tons of new features to put acceleration in even more places: Kubernetes routing, more supported backend providers, and modern protocols. 👌

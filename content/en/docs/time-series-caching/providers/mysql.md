@@ -1,7 +1,7 @@
 ---
 title: "MySQL Provider"
 linkTitle: "MySQL"
-weight: 60
+weight: 100
 ---
 
 Trickster can accept native MySQL client connections, proxy each authenticated
@@ -78,8 +78,9 @@ backends:
       recovery_threshold: 2
 ```
 
-Exactly one direct MySQL backend or one supported MySQL User Router ALB maps to
-a MySQL listener. The origin URL must use the `mysql` scheme and include an
+Exactly one direct MySQL backend, one supported MySQL User Router ALB, or one
+[session-balancing ALB](#balancing-sessions-across-replicas) maps to a MySQL
+listener. The origin URL must use the `mysql` scheme and include an
 origin username. Percent-encode reserved username, password, and database
 characters. Configuration stringification and the sanitized management
 configuration redact an embedded origin password, but the source configuration
@@ -237,7 +238,7 @@ as supported. The corpus covers `$__time`, `$__timeEpoch`, `$__timeFilter`,
 `$__unixEpochGroup`, and `$__unixEpochGroupAlias`. Its documented minimum
 `$__interval` is one minute.
 
-Grafana's normal inclusive `$__timeFilter` expansion is OPC:
+Grafana's normal inclusive `$__timeFilter` expansion is delta-cached (DPC):
 
 ```sql
 SELECT
@@ -250,7 +251,7 @@ GROUP BY time
 ORDER BY time
 ```
 
-Compose `$__timeFrom()` and `$__timeTo()` into a half-open predicate for DPC:
+A half-open predicate composed from `$__timeFrom()` and `$__timeTo()` is also DPC:
 
 ```sql
 SELECT
@@ -278,11 +279,19 @@ GROUP BY time
 ORDER BY time
 ```
 
-Trickster normalizes the lower bound up and the exclusive upper bound down to
-the cadence and caches only complete buckets. A range with no complete bucket
-normalizes to an empty range. Inclusive upper bounds and Grafana's strict-lower
-`$__unixEpochFilter` expansion remain OPC because they do not prove the same
-complete-bucket semantics. Native `DATETIME`/`TIMESTAMP`, epoch-second integer,
+Trickster caches only complete buckets. Under the default `step_alignment`,
+`drop`, it rounds the lower bound up and the upper bound down to the cadence,
+and an inclusive upper bound, such as the end of `BETWEEN`, also drops the
+bucket that contains it, because that bucket is only partly covered. The
+`partial`, `partial_start` and `partial_end` modes fetch those edge buckets
+from the origin over the client's own bounds, through the object cache for
+`partial_bucket_ttl`, at a cost of up to two small origin queries per request,
+and `truncate` answers the whole first bucket. A range with no complete bucket
+is answered with the origin's own result for the statement, cached as an object
+for `partial_bucket_ttl`. A query can choose its own mode with a comment, such
+as `/* trickster-step-align:partial */`. See [Step Alignment](/docs/time-series-caching/step-alignment/).
+Grafana's strict-lower `$__unixEpochFilter` expansion remains OPC, because a
+strict lower bound does not cover the first bucket completely. Native `DATETIME`/`TIMESTAMP`, epoch-second integer,
 and the corpus's epoch-nanosecond adaptation are supported in their recorded
 shapes.
 
@@ -380,6 +389,53 @@ The verified username and selected terminal remain in cache identity. Route
 metrics use configured router/backend names and bounded outcomes, never the
 username.
 
+## Balancing sessions across replicas
+
+A MySQL listener can also map to an ALB that balances its sessions across a
+pool of direct MySQL backends, such as read replicas:
+
+```yaml
+backends:
+  replica-1:
+    provider: mysql
+    authenticator_name: app-clients
+    origin_url: mysql://app_ro:REDACTED@replica-1.example:3306/analytics
+    healthcheck:
+      interval: 5s
+
+  replica-2:
+    provider: mysql
+    authenticator_name: app-clients
+    origin_url: mysql://app_ro:REDACTED@replica-2.example:3306/analytics
+    healthcheck:
+      interval: 5s
+
+  replicas:
+    provider: alb
+    listener_names: [mysql-replicas]
+    authenticator_name: app-clients
+    alb:
+      mechanism: lc # rr, p2c, lc or hrw
+      pool:
+        - replica-1
+        - name: replica-2
+          weight: 2
+```
+
+The ALB owns the downstream authentication exchange, admission, and TLS, as a
+User Router does, and each pool member owns its origin credentials, cache,
+health, and query policy. A session is committed to one member after it
+authenticates and stays there until it ends. `lc` and `p2c` compare members by
+their open sessions; `hrw` keeps a client address (`hrw.key: client_ip`, the
+default) or a user name (`hrw.key: user`) on one member. `weight`, `backup`
+members, and `healthy_floor` apply as they do for any ALB. `lt`, the fanout
+mechanisms, nested ALBs, mixed providers, and autodiscovery are configuration
+errors. See
+[Load Balancing Native Protocol Sessions](/docs/routing/alb/#load-balancing-native-protocol-sessions).
+
+A change of mechanism or weight applies to new sessions on reload; a change to
+the set of pool members restarts the listener.
+
 ## Metrics, logs, and health
 
 Important metrics include:
@@ -470,7 +526,7 @@ connections indefinitely.
 3. For DPC, inspect the expanded SQL: require a literal cadence and `>=` lower,
    `<` upper raw-time predicates.
 4. Confirm the requested interval contains at least one complete cadence
-   bucket and that cache TTL, backfill tolerance, and retention are suitable.
+   bucket and that cache TTL, volatile window, and retention are suitable.
 5. Check username, selected backend, database, and time zone; these intentionally
    isolate keys.
 6. Inspect cache operation status and eviction metrics for admission failures
@@ -550,6 +606,20 @@ The initial release does not claim support for:
   buckets, or inclusive-range DPC;
 - arbitrary session-state caching or cross-session mutation invalidation; and
 - nested/mixed MySQL User Router topologies or origin credential remapping.
+
+### Streamed result metadata and FOUND_ROWS()
+
+Vitess does not expose the terminal status flags and warning count of a
+streamed result set. To preserve those fields for the downstream client,
+Trickster issues `SHOW COUNT(*) WARNINGS` on the same upstream connection
+after the stream ends. That diagnostic statement can update connection-local
+MySQL diagnostics, so `FOUND_ROWS()` immediately after a streamed result may
+reflect the hidden warning-count query rather than the client's previous
+statement.
+
+This is a known compatibility gap in the Vitess streaming API, not a
+Trickster-specific SQL parsing defect. A Vitess API that exposes terminal
+result metadata is required to remove the workaround.
 
 The executable SQL contract is
 [`pkg/backends/mysql/testdata/compatibility/v1.json`](https://github.com/trickstercache/trickster/blob/main/pkg/backends/mysql/testdata/compatibility/v1.json). The maintainer-facing frozen release matrix is in

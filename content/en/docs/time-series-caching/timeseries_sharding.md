@@ -1,7 +1,7 @@
 ---
 title: "Timeseries Request Sharding"
 linkTitle: "Request Sharding"
-weight: 40
+weight: 50
 ---
 
 ## Overview
